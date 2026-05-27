@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Rain Vision",
+        "description": "Enter your Rain Vision account credentials (rainvision.it)",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password",
+      "cannot_connect": "Cannot connect to Rain Vision server",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "Account already configured"
+    }
+  }
+}

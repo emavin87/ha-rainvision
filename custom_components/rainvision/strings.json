@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configura Rain Vision",
+        "description": "Inserisci le credenziali del tuo account Rain Vision (rainvision.it)",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Email o password non validi",
+      "cannot_connect": "Impossibile connettersi al server Rain Vision",
+      "unknown": "Errore sconosciuto"
+    },
+    "abort": {
+      "already_configured": "Account già configurato"
+    }
+  }
+}
