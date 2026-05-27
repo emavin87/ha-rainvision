@@ -1,648 +1,254 @@
-"""
-Rain Vision API Client
-======================
-This module provides the low-level HTTP client for the Rain Vision REST API
-(https://www.rainvision.it/api/v5).
-
-It handles:
-- Authentication (login + token validation)
-- Fetching places, clouds, devices and their state
-- Reading and writing irrigation programs
-- Sending manual irrigation start/stop commands
-
-All methods are async and use aiohttp for HTTP communication.
-Errors are raised as RainVisionAuthError (auth failures) or
-RainVisionApiError (network/server errors), so callers can
-handle them distinctly.
-"""
+"""Async HTTP client for the Rainvision v5 cloud API."""
 from __future__ import annotations
 
-import datetime
 import logging
-import uuid
 from typing import Any
 
 import aiohttp
 
+from .const import BASE_URL
+
 _LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://www.rainvision.it/api/v5"
 
-# Default headers sent with every request
-HEADERS_BASE = {
-    "Content-Type": "application/json",
-    "Content-Language": "it",
-    "Accept": "application/json, text/plain, */*",
-}
+class RainvisionAuthError(Exception):
+    """Raised when the API returns a 401 or the token is missing."""
 
 
-class RainVisionAuthError(Exception):
-    """Raised when authentication fails.
+class RainvisionConnectionError(Exception):
+    """Raised on network failures or unexpected HTTP status codes."""
 
-    This covers invalid credentials on login and expired/invalid tokens
-    on subsequent API calls (HTTP 401 responses).
+
+class RainvisionApiClient:
+    """Wraps every Rainvision v5 endpoint used by this integration.
+
+    All methods are coroutines and must be awaited.
+    Authentication is Bearer-token based: call authenticate() once to obtain
+    a token, which is then stored and sent automatically on every subsequent
+    request.
     """
 
-
-class RainVisionApiError(Exception):
-    """Raised for all non-auth API failures.
-
-    This covers network errors, unexpected HTTP status codes,
-    missing fields in responses, and invalid arguments passed
-    to convenience methods.
-    """
-
-
-class RainVisionApi:
-    """Async HTTP client for the Rain Vision irrigation API.
-
-    Wraps all known API endpoints and provides convenience methods
-    that combine multiple calls (e.g. fetch → patch → save).
-
-    Usage:
-        session = aiohttp.ClientSession()
-        api = RainVisionApi(session)
-        token = await api.authenticate("user@example.com", "password")
-        places = await api.get_places()
-
-    The token is stored internally and automatically included in all
-    subsequent requests via the Authorization header.
-    """
-
-    def __init__(self, session: aiohttp.ClientSession) -> None:
-        """Initialize the API client.
-
-        Args:
-            session: An aiohttp ClientSession to use for all HTTP requests.
-                     The caller is responsible for its lifecycle.
-        """
+    def __init__(self, session: aiohttp.ClientSession, token: str | None = None) -> None:
         self._session = session
-        self._token: str | None = None
-
-    # ── Token management ──────────────────────────────────────────────────────
+        self._token = token
 
     @property
     def token(self) -> str | None:
         """Return the current Bearer token, or None if not authenticated."""
         return self._token
 
-    @token.setter
-    def token(self, value: str) -> None:
-        """Set the Bearer token directly (e.g. from a stored config entry)."""
-        self._token = value
+    async def _request(self, endpoint: str, body: dict | None = None) -> dict[str, Any]:
+        """Send an authenticated POST request and return the parsed JSON body.
 
-    def _auth_headers(self) -> dict:
-        """Build request headers with the Authorization Bearer token.
+        Args:
+            endpoint: API path relative to BASE_URL (e.g. "nuvola/device").
+            body: Optional JSON payload; defaults to an empty dict.
 
-        Returns a copy of HEADERS_BASE with the Authorization header
-        added if a token is available.
+        Raises:
+            RainvisionAuthError: HTTP 401 received.
+            RainvisionConnectionError: Any other non-200 status or network error.
         """
-        headers = dict(HEADERS_BASE)
+        url = f"{BASE_URL}/{endpoint}"
+        headers = {"Content-Type": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        return headers
 
-    # ── Authentication ────────────────────────────────────────────────────────
+        try:
+            async with self._session.post(url, json=body or {}, headers=headers) as resp:
+                if resp.status == 401:
+                    raise RainvisionAuthError("Token invalid or expired")
+                if resp.status != 200:
+                    raise RainvisionConnectionError(
+                        f"HTTP {resp.status} from endpoint '{endpoint}'"
+                    )
+                return await resp.json()
+        except aiohttp.ClientError as err:
+            raise RainvisionConnectionError(f"Network error: {err}") from err
+
+    # -------------------------------------------------------------------------
+    # Authentication
+    # -------------------------------------------------------------------------
 
     async def authenticate(self, email: str, password: str) -> str:
-        """Log in with email and password and return a new api_token.
+        """Log in with email/password and store the returned Bearer token.
 
-        Calls POST /api/v5/token with the user credentials and a
-        randomly generated device_name (required by the API to identify
-        the client session).
+        Calls POST /token with device_name = "homeassistant".
 
         Args:
-            email: The user's Rain Vision account email.
-            password: The user's Rain Vision account password.
+            email: Rainvision account email address.
+            password: Rainvision account password.
 
         Returns:
-            The api_token string to be used as Bearer token.
+            The Bearer token string.
 
         Raises:
-            RainVisionAuthError: If credentials are invalid (HTTP 401)
-                                 or the token is missing from the response.
-            RainVisionApiError: On network errors or unexpected HTTP status.
+            RainvisionAuthError: If the response does not contain a token.
         """
-        device_name = f"web-{uuid.uuid4()}"
-        payload = {
+        data = await self._request("token", {
             "email": email,
             "password": password,
-            "device_name": device_name,
-        }
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/token",
-                json=payload,
-                headers=HEADERS_BASE,
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Invalid email or password")
-                if resp.status != 200:
-                    raise RainVisionApiError(f"Unexpected HTTP status {resp.status}")
-                data = await resp.json()
-                token = data.get("api_token")
-                if not token:
-                    raise RainVisionAuthError("Login succeeded but no token in response")
-                self._token = token
-                return token
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error during login: {err}") from err
+            "device_name": "homeassistant",
+        })
+        token = data.get("token")
+        if not token:
+            raise RainvisionAuthError("No token in authentication response")
+        self._token = token
+        return token
 
     async def check_token(self) -> bool:
-        """Check whether the current token is still valid.
+        """Verify that the current Bearer token is still valid.
 
-        Calls POST /api/v5/check-token with the stored Bearer token.
-        This is a lightweight validity check that does not require
-        sending credentials again.
+        Calls POST /check-token (no body required). The endpoint returns HTTP
+        200 with a success payload when the token is valid, or HTTP 401 when
+        it has expired or been revoked.
 
         Returns:
-            True if the token is valid (HTTP 200), False otherwise.
+            True if the token is valid, False otherwise.
+
+        Note:
+            This method intentionally catches RainvisionAuthError and returns
+            False rather than raising, so callers can branch on the result
+            without needing a try/except block.
         """
-        if not self._token:
+        try:
+            await self._request("check-token")
+            return True
+        except RainvisionAuthError:
             return False
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/check-token",
-                headers=self._auth_headers(),
-            ) as resp:
-                return resp.status == 200
-        except aiohttp.ClientError:
-            return False
 
-    async def ensure_authenticated(self, email: str, password: str) -> str:
-        """Ensure the client has a valid token, re-authenticating if needed.
+    # -------------------------------------------------------------------------
+    # Places
+    # -------------------------------------------------------------------------
 
-        First checks the stored token with check_token(). If the token
-        is missing or expired, calls authenticate() to obtain a new one.
+    async def get_places(self) -> dict[str, Any]:
+        """Return all places (sites) associated with the account.
 
-        This is the preferred method to call at startup so that stored
-        tokens are reused across Home Assistant restarts without
-        unnecessarily triggering a new login.
+        Calls POST /GetPlaces — no body required.
+        Response key: places / self_places.
+        """
+        return await self._request("GetPlaces")
+
+    async def get_place_details(self, place_id: int) -> dict[str, Any]:
+        """Return full details for a single place, including current weather.
+
+        Calls POST /GetPlaceDetails with {"place_id": <int>}.
+        Response key: place (contains meteo, alarms, lat/lng, …).
+        """
+        return await self._request("GetPlaceDetails", {"place_id": place_id})
+
+    # -------------------------------------------------------------------------
+    # Hub (Nuvola)
+    # -------------------------------------------------------------------------
+
+    async def get_nuvola_stat(self, cloud_puid: str, utc_offset: int = 120) -> dict[str, Any]:
+        """Return status and metadata for the NUVOLA VISION hub.
+
+        Calls POST /nuvola/stat.
 
         Args:
-            email: Account email, used only if re-authentication is needed.
-            password: Account password, used only if re-authentication is needed.
+            cloud_puid: PUID of the Nuvola hub (e.g. "2000001121").
+            utc_offset: UTC offset in minutes for the device's timezone.
 
-        Returns:
-            The valid api_token string.
-
-        Raises:
-            RainVisionAuthError: If re-authentication fails.
-            RainVisionApiError: On network errors.
+        Response keys: cloud (battery, firmware, lat/lng, …), devstat.
         """
-        valid = await self.check_token()
-        if not valid:
-            _LOGGER.info("Rain Vision token expired or missing, re-authenticating")
-            return await self.authenticate(email, password)
-        return self._token
+        return await self._request("nuvola/stat", {
+            "cloud_puid": cloud_puid,
+            "utcOffsetMinutes": utc_offset,
+            "forceRefresh": False,
+        })
 
-    # ── Data fetching ─────────────────────────────────────────────────────────
+    async def scan_ble_peers(
+        self, cloud_puid: str, utc_offset: int = 120
+    ) -> dict[str, Any]:
+        """Trigger a full BLE scan from the Nuvola hub and return found peers.
 
-    async def get_places(self) -> list[dict]:
-        """Fetch all places (impianti) owned by the authenticated user.
-
-        Calls POST /api/v5/GetPlaces. Each place contains:
-        - Basic info (id, name, city, coordinates)
-        - A list of 'clouds' (Nuvola Vision hub devices)
-        - Each cloud contains a list of 'devices' (Pure Vision controllers)
-        - Each device contains zone names, program names, battery level,
-          firmware info, online status, and a 'manual' hex string encoding
-          the current manual irrigation state.
-
-        Returns:
-            A flat list combining self_places and shared places.
-
-        Raises:
-            RainVisionAuthError: If the token is invalid (HTTP 401).
-            RainVisionApiError: On network or server errors.
-        """
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/GetPlaces",
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                if resp.status != 200:
-                    raise RainVisionApiError(f"Unexpected HTTP status {resp.status}")
-                data = await resp.json()
-                # Merge owned places and shared places into a single list
-                return data.get("self_places", []) + data.get("places", [])
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
-
-    async def get_device_program_list(self, puid: str) -> list[dict]:
-        """Fetch the full irrigation program list for a specific device.
-
-        Calls POST /api/v5/GetDeviceProgramList. The response contains
-        one entry for each program slot (A through H), each with:
-        - name: program letter ('A', 'B', ...)
-        - times: up to 6 start time slots [{active, time, records, hidden}]
-        - zones: list of zone entries [{id, progressive, name, duration (seconds)}]
-        - cycle: frequency string in hours (e.g. '48' = every 2 days)
-        - weekdays: list of [{name, index, isChecked}]
-        - type: 'cycle' or other schedule type
-        - even: internal bitmask string
-
-        The timezone offset is automatically derived from the system clock
-        and passed to the API as required (e.g. 'GMT+02:00').
+        Calls POST /nuvola/scan/full.
+        Peers include battery-powered sensors such as ACQUA VISION.
 
         Args:
-            puid: The device's puid string (e.g. '1000005059').
+            cloud_puid: PUID of the Nuvola hub.
+            utc_offset: UTC offset in minutes.
 
-        Returns:
-            List of program dicts as described above.
-
-        Raises:
-            RainVisionAuthError: If the token is invalid.
-            RainVisionApiError: On network or server errors.
+        Response key: peers (list of BLE devices with puid, battery, devicetype, …).
         """
-        tz_offset = datetime.datetime.now().astimezone().strftime("%z")
-        offset_str = f"GMT{tz_offset[:3]}:{tz_offset[3:]}"
-        payload = {"id": puid, "offset": offset_str}
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/GetDeviceProgramList",
-                json=payload,
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                if resp.status != 200:
-                    raise RainVisionApiError(f"Unexpected HTTP status {resp.status}")
-                data = await resp.json()
-                return data.get("programs", [])
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
+        return await self._request("nuvola/scan/full", {
+            "cloud_puid": cloud_puid,
+            "scan_type": 1,
+            "forceRefresh": False,
+            "utcOffsetInMinutes": utc_offset,
+        })
 
-    # ── Manual irrigation commands ────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Irrigation device (PURE VISION)
+    # -------------------------------------------------------------------------
 
-    async def manual_start_zone(
-        self,
-        cloud_id: int,
-        device_id: int,
-        zone: int,
-        duration_minutes: int = 10,
-    ) -> bool:
-        """Start manual irrigation on a specific zone.
+    async def get_device_status(
+        self, device_puid: str, utc_offset: int = 120, force: bool = False
+    ) -> dict[str, Any]:
+        """Return the live status of an irrigation controller.
 
-        Calls POST /api/v5/ManualStart. The command is routed through
-        the Nuvola cloud hub (identified by cloud_id) to the Pure Vision
-        device (device_id).
+        Calls POST /nuvola/device.
+        The response contains raw hex status strings (status, settings, pause,
+        extravalve) plus battery level and the full device record.
 
         Args:
-            cloud_id: The id of the Nuvola hub that manages the device.
-            device_id: The id of the Pure Vision device.
-            zone: Zone number (1-based integer, e.g. 1 for zone 1).
-            duration_minutes: How long to irrigate (default: 10 minutes).
-
-        Returns:
-            True if the API accepted the command (HTTP 200).
-
-        Raises:
-            RainVisionAuthError: If the token is invalid.
-            RainVisionApiError: On network errors.
+            device_puid: PUID of the irrigation device (e.g. "1000005059").
+            utc_offset: UTC offset in minutes.
+            force: When True the hub fetches fresh data instead of using cache.
         """
-        payload = {
-            "cloud_id": cloud_id,
-            "device_id": device_id,
-            "zone": zone,
-            "duration": duration_minutes,
-        }
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/ManualStart",
-                json=payload,
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
-
-    async def manual_stop(self, cloud_id: int, device_id: int) -> bool:
-        """Stop any ongoing manual irrigation on a device.
-
-        Calls POST /api/v5/ManualStop. This stops all manually running zones
-        on the specified device immediately.
-
-        Args:
-            cloud_id: The id of the Nuvola hub.
-            device_id: The id of the Pure Vision device.
-
-        Returns:
-            True if the API accepted the command (HTTP 200).
-
-        Raises:
-            RainVisionAuthError: If the token is invalid.
-            RainVisionApiError: On network errors.
-        """
-        payload = {"cloud_id": cloud_id, "device_id": device_id}
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/ManualStop",
-                json=payload,
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
-
-    # ── Program writing ───────────────────────────────────────────────────────
-
-    async def set_device_programs(self, device_puid: str, programs: list[dict]) -> bool:
-        """Save the complete irrigation programs list for a device.
-
-        Calls POST /api/v5/SetDeviceProgramsNuvola with the full programs
-        payload. The API requires ALL programs (A-H) to be sent together,
-        even if only one was modified. Read-only fields (e.g. zone 'name',
-        time 'records') are stripped before sending.
-
-        The payload structure is:
-            {
-                device_puid: str,
-                programs: [
-                    {
-                        name: str,          # 'A' through 'H'
-                        times: [{time, active, hidden}],
-                        zones: [{id, progressive, duration}],
-                        type: str,          # 'cycle'
-                        cycle: str,         # hours as string, e.g. '48'
-                        weekdays: [{index, name, isChecked}],
-                        even: str,          # internal bitmask
-                        calendar: null,
-                        active: bool
-                    }
-                ],
-                overlapping: {isSafe: true}
-            }
-
-        Args:
-            device_puid: Device puid string (e.g. '1000005059').
-            programs: Full list of program dicts, typically obtained from
-                      get_device_program_list() with modifications applied.
-
-        Returns:
-            True if the API accepted the update (HTTP 200).
-
-        Raises:
-            RainVisionAuthError: If the token is invalid.
-            RainVisionApiError: On network errors.
-        """
-        # Strip read-only fields the write API does not accept
-        clean_programs = []
-        for prog in programs:
-            clean_zones = [
-                {
-                    "id": z["id"],
-                    "progressive": z["progressive"],
-                    "duration": z.get("duration", 0),
-                }
-                for z in prog.get("zones", [])
-            ]
-            clean_times = [
-                {
-                    "time": t.get("time"),
-                    "active": t.get("active", False),
-                    "hidden": t.get("hidden", False),
-                }
-                for t in prog.get("times", [])
-            ]
-            clean_programs.append({
-                "name": prog["name"],
-                "times": clean_times,
-                "zones": clean_zones,
-                "type": prog.get("type", "cycle"),
-                "cycle": prog.get("cycle", "6"),
-                "weekdays": prog.get("weekdays", []),
-                "even": prog.get("even", "253"),
-                "calendar": prog.get("calendar"),
-                "active": prog.get("active", True),
-            })
-
-        payload = {
+        return await self._request("nuvola/device", {
             "device_puid": device_puid,
-            "programs": clean_programs,
-            "overlapping": {"isSafe": True},
-        }
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/SetDeviceProgramsNuvola",
-                json=payload,
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
+            "utcOffsetInMinutes": utc_offset,
+            "forceRefresh": force,
+        })
 
-    # ── Convenience patch methods (fetch → modify → save) ─────────────────────
+    async def get_program_names(self, device_puid: str) -> dict[str, Any]:
+        """Return program names and weather-based pause data for a device.
 
-    async def set_zone_duration_in_program(
-        self,
-        device_puid: str,
-        program_name: str,
-        zone_id: int,
-        duration_seconds: int,
-    ) -> bool:
-        """Update the irrigation duration for one zone within a program.
-
-        Convenience method that performs a full read-modify-write cycle:
-        1. Fetches the current program list with get_device_program_list()
-        2. Finds the target program and zone by name/id
-        3. Updates the duration field
-        4. Saves the full programs list with set_device_programs()
+        Calls POST /GetProgramNames.
+        The response embeds meteo_pause_json: a JSON string with per-program
+        weather variables (temp, wind, pop, should_run, irrigation_variable, …).
 
         Args:
-            device_puid: Device puid (e.g. '1000005059').
-            program_name: Program letter ('A' through 'H').
-            zone_id: Zone id as used by the API (1, 2, 4, or 8 for zones 1-4).
-            duration_seconds: New duration in seconds (0 disables the zone).
-
-        Returns:
-            True if the save succeeded.
-
-        Raises:
-            RainVisionApiError: If the program or zone is not found,
-                                or on network errors.
+            device_puid: PUID of the irrigation device.
         """
-        programs = await self.get_device_program_list(device_puid)
-        patched = False
-        for prog in programs:
-            if prog.get("name") == program_name:
-                for zone in prog.get("zones", []):
-                    if zone.get("id") == zone_id:
-                        zone["duration"] = duration_seconds
-                        patched = True
-                        break
-        if not patched:
-            raise RainVisionApiError(
-                f"Program '{program_name}' or zone id {zone_id} not found"
-            )
-        return await self.set_device_programs(device_puid, programs)
+        return await self._request("GetProgramNames", {"device_puid": device_puid})
 
-    async def set_program_start_time(
-        self,
-        device_puid: str,
-        program_name: str,
-        time_index: int,
-        time: str,
-        active: bool,
-    ) -> bool:
-        """Update a start time slot within a program.
+    async def get_zone_names(self, device_puid: str) -> dict[str, Any]:
+        """Return zone names (both default and user-defined) for a device.
 
-        Each program has up to 6 time slots (index 0-5). This method
-        performs a read-modify-write cycle to update a single slot's
-        start time and active state without touching the other slots.
+        Calls POST /GetZoneNames.
+        Response includes fullzonenames: list of {zone_progressive, default_name,
+        custom_name}.
 
         Args:
-            device_puid: Device puid (e.g. '1000005059').
-            program_name: Program letter ('A' through 'H').
-            time_index: Which time slot to update (0 = first, up to 5).
-            time: Start time string in 'HH:MM' format (e.g. '06:30').
-            active: True to enable this time slot, False to disable it.
-
-        Returns:
-            True if the save succeeded.
-
-        Raises:
-            RainVisionApiError: If the program is not found, the index is
-                                out of range, or on network errors.
+            device_puid: PUID of the irrigation device.
         """
-        programs = await self.get_device_program_list(device_puid)
-        patched = False
-        for prog in programs:
-            if prog.get("name") == program_name:
-                times = prog.get("times", [])
-                if time_index >= len(times):
-                    raise RainVisionApiError(
-                        f"Time slot index {time_index} out of range for program {program_name}"
-                    )
-                times[time_index]["time"] = time
-                times[time_index]["active"] = active
-                patched = True
-                break
-        if not patched:
-            raise RainVisionApiError(f"Program '{program_name}' not found")
-        return await self.set_device_programs(device_puid, programs)
+        return await self._request("GetZoneNames", {"device_puid": device_puid})
 
-    async def set_program_cycle(
-        self,
-        device_puid: str,
-        program_name: str,
-        cycle_hours: int,
-    ) -> bool:
-        """Update the cycle frequency of a program.
+    async def get_program_list(self, device_puid: str, offset: str = "GMT+0200") -> dict[str, Any]:
+        """Return the full schedule for every program on a device.
 
-        The cycle defines how often the program repeats, expressed in hours.
-        Common values: 6 (4x/day), 24 (daily), 48 (every 2 days).
-
-        Performs a read-modify-write cycle.
+        Calls POST /GetDeviceProgramList.
+        Each program entry contains times (up to 6 start times), zones with
+        durations, cycle interval, weekday flags, and schedule type.
 
         Args:
-            device_puid: Device puid (e.g. '1000005059').
-            program_name: Program letter ('A' through 'H').
-            cycle_hours: Repeat interval in hours (e.g. 48 = every 2 days).
-
-        Returns:
-            True if the save succeeded.
-
-        Raises:
-            RainVisionApiError: If the program is not found or on network errors.
+            device_puid: PUID of the irrigation device.
+            offset: Timezone offset string used by the API (e.g. "GMT+0200").
         """
-        programs = await self.get_device_program_list(device_puid)
-        patched = False
-        for prog in programs:
-            if prog.get("name") == program_name:
-                prog["cycle"] = str(cycle_hours)
-                patched = True
-                break
-        if not patched:
-            raise RainVisionApiError(f"Program '{program_name}' not found")
-        return await self.set_device_programs(device_puid, programs)
+        return await self._request("GetDeviceProgramList", {
+            "id": device_puid,
+            "offset": offset,
+        })
 
-    async def set_program_weekdays(
-        self,
-        device_puid: str,
-        program_name: str,
-        active_day_indexes: list[int],
-    ) -> bool:
-        """Update which weekdays a program is scheduled to run.
+    async def get_mode(self, puid: str) -> dict[str, Any]:
+        """Return the current operating mode of a device.
 
-        Performs a read-modify-write cycle, enabling only the days
-        whose indexes appear in active_day_indexes and disabling the rest.
-
-        Day index mapping (matches Rain Vision API):
-            1 = Sunday, 2 = Monday, 3 = Tuesday, 4 = Wednesday,
-            5 = Thursday, 6 = Friday, 7 = Saturday
+        Calls POST /GetMode.
+        Response: {"mode": <int>}  — 0 = automatic, 1 = manual.
 
         Args:
-            device_puid: Device puid (e.g. '1000005059').
-            program_name: Program letter ('A' through 'H').
-            active_day_indexes: List of day indexes to enable
-                                (e.g. [2, 4, 6] = Mon/Wed/Fri).
-
-        Returns:
-            True if the save succeeded.
-
-        Raises:
-            RainVisionApiError: If the program is not found or on network errors.
+            puid: PUID of the device.
         """
-        programs = await self.get_device_program_list(device_puid)
-        patched = False
-        for prog in programs:
-            if prog.get("name") == program_name:
-                for day in prog.get("weekdays", []):
-                    day["isChecked"] = day["index"] in active_day_indexes
-                patched = True
-                break
-        if not patched:
-            raise RainVisionApiError(f"Program '{program_name}' not found")
-        return await self.set_device_programs(device_puid, programs)
-
-    async def set_program_active(
-        self,
-        cloud_id: int,
-        device_id: int,
-        program: str,
-        active: bool,
-    ) -> bool:
-        """Enable or disable a program (A-H) on a device.
-
-        Calls POST /api/v5/SetProgramActive. This is a direct toggle
-        that does not require sending the full programs payload.
-
-        Args:
-            cloud_id: The id of the Nuvola hub.
-            device_id: The id of the Pure Vision device.
-            program: Program letter to toggle ('A' through 'H').
-            active: True to enable the program, False to disable it.
-
-        Returns:
-            True if the API accepted the command (HTTP 200).
-
-        Raises:
-            RainVisionAuthError: If the token is invalid.
-            RainVisionApiError: On network errors.
-        """
-        payload = {
-            "cloud_id": cloud_id,
-            "device_id": device_id,
-            "program": program,
-            "active": active,
-        }
-        try:
-            async with self._session.post(
-                f"{BASE_URL}/SetProgramActive",
-                json=payload,
-                headers=self._auth_headers(),
-            ) as resp:
-                if resp.status == 401:
-                    raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
-        except aiohttp.ClientError as err:
-            raise RainVisionApiError(f"Connection error: {err}") from err
+        return await self._request("GetMode", {"puid": puid})

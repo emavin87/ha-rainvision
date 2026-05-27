@@ -1,13 +1,12 @@
 {
   "domain": "rainvision",
-  "name": "Rain Vision",
+  "name": "Rainvision",
   "version": "1.0.0",
-  "description": "Integrazione per il sistema di irrigazione smart Rain Vision (RAIN S.p.A.)",
-  "documentation": "https://github.com/rainvision/home-assistant",
-  "issue_tracker": "https://github.com/rainvision/home-assistant/issues",
+  "documentation": "https://github.com/your-repo/rainvision-ha",
+  "issue_tracker": "https://github.com/your-repo/rainvision-ha/issues",
   "dependencies": [],
   "codeowners": [],
   "requirements": [],
-  "iot_class": "cloud_polling",
-  "config_flow": true
+  "config_flow": true,
+  "iot_class": "cloud_polling"
 }

@@ -2,21 +2,23 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configura Rain Vision",
-        "description": "Inserisci le credenziali del tuo account Rain Vision (rainvision.it)",
+        "title": "Set up Rainvision",
+        "description": "Enter your Rainvision account credentials and the PUIDs of your devices.",
         "data": {
           "email": "Email",
-          "password": "Password"
+          "password": "Password",
+          "cloud_puid": "Hub PUID (e.g. 2000001121)",
+          "device_puid": "Irrigation device PUID (e.g. 1000005059)"
         }
       }
     },
     "error": {
-      "invalid_auth": "Email o password non validi",
-      "cannot_connect": "Impossibile connettersi al server Rain Vision",
-      "unknown": "Errore sconosciuto"
+      "invalid_auth": "Incorrect email or password.",
+      "cannot_connect": "Cannot connect to the Rainvision server.",
+      "unknown": "Unexpected error. Check the logs for details."
     },
     "abort": {
-      "already_configured": "Account già configurato"
+      "already_configured": "This device is already configured."
     }
   }
 }

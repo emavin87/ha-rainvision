@@ -1,47 +1,235 @@
-"""
-Rain Vision Sensor Entities
-============================
-This module defines all sensor entities exposed by the Rain Vision integration.
+"""Sensor platform for the Rainvision integration.
 
-Each sensor class extends CoordinatorEntity (for automatic state updates
-on coordinator polls) and SensorEntity (for the HA sensor platform contract).
-
-Sensors are created dynamically in async_setup_entry based on the devices
-and programs discovered during the first coordinator refresh. No sensors
-are hard-coded — they reflect whatever hardware and programs are found in
-the user's Rain Vision account.
-
-Sensor types:
-    - RainVisionCloudBatterySensor   : Battery level of a Nuvola hub
-    - RainVisionDeviceBatterySensor  : Battery level of a Pure Vision controller
-    - RainVisionActiveProgramsSensor : Which programs (A-H) are currently active
-    - RainVisionMeteoPauseSensor     : Whether a meteo pause is in effect
-    - RainVisionProgramDetailSensor  : Summary of a single program (next start time,
-                                       total duration, active zones, cycle info)
-    - RainVisionProgramZoneDurationSensor : Duration assigned to one zone in one program
+Creates one sensor entity per data point exposed by the API, plus one
+dynamic zone sensor per irrigation zone returned by GetZoneNames.
 """
 from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
+    SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.util import dt as dt_util
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, MANUFACTURER, MODEL_CLOUD, MODEL_DEVICE
-from .coordinator import RainVisionCoordinator
+from .const import DOMAIN, COORDINATOR_DEVICE, COORDINATOR_STAT, COORDINATOR_PROGRAMS
+from .coordinator import RainvisionCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RainvisionSensorDescription(SensorEntityDescription):
+    """Extends SensorEntityDescription with extractor callbacks.
+
+    value_fn: Receives coordinator.data and returns the sensor's native value.
+    attr_fn:  Receives coordinator.data and returns extra_state_attributes dict.
+    """
+    value_fn: Any = None
+    attr_fn: Any = None
+
+
+# ---------------------------------------------------------------------------
+# Value extractor functions
+# Each function receives the full coordinator.data dict and returns the value
+# for a specific sensor, or None when the path is unavailable.
+# ---------------------------------------------------------------------------
+
+def _battery_device(data: dict) -> int | None:
+    """Extract battery level from the nuvola/device response."""
+    try:
+        return data[COORDINATOR_DEVICE]["data"]["status"]["battery"]
+    except (KeyError, TypeError):
+        return None
+
+
+def _battery_cloud(data: dict) -> int | None:
+    """Extract battery level of the Nuvola hub from the nuvola/stat response."""
+    try:
+        return data[COORDINATOR_STAT]["cloud"]["battery"]
+    except (KeyError, TypeError):
+        return None
+
+
+def _active_programs(data: dict) -> str | None:
+    """Return the active programs as a space-separated string (e.g. 'A B C D').
+
+    The API returns the raw value as '[A,B,C,D]'.
+    """
+    try:
+        raw = data[COORDINATOR_DEVICE]["device"]["active_programs"]
+        return raw.strip("[]").replace(",", " ") if raw else None
+    except (KeyError, TypeError):
+        return None
+
+
+def _firmware(data: dict) -> int | None:
+    """Extract the firmware ID of the irrigation device."""
+    try:
+        return data[COORDINATOR_DEVICE]["device"]["firmware_id"]
+    except (KeyError, TypeError):
+        return None
+
+
+def _meteo_temp(data: dict) -> float | None:
+    """Extract the forecast temperature used by the weather-pause algorithm (°C).
+
+    Source: device.meteo_pause_json[0].temp from GetProgramNames.
+    """
+    try:
+        meteo_raw = data[COORDINATOR_PROGRAMS]["device"]["meteo_pause_json"]
+        meteo = json.loads(meteo_raw)
+        return float(meteo[0]["temp"])
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
+def _meteo_rain(data: dict) -> float | None:
+    """Extract probability of precipitation as a percentage (0–100).
+
+    The API returns 'pop' as a 0–1 float; multiply by 100 for display.
+    Source: device.meteo_pause_json[0].pop from GetProgramNames.
+    """
+    try:
+        meteo_raw = data[COORDINATOR_PROGRAMS]["device"]["meteo_pause_json"]
+        meteo = json.loads(meteo_raw)
+        return round(float(meteo[0]["pop"]) * 100, 1)
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
+def _meteo_wind(data: dict) -> float | None:
+    """Extract wind speed (m/s) used by the weather-pause algorithm.
+
+    Source: device.meteo_pause_json[0].wind from GetProgramNames.
+    """
+    try:
+        meteo_raw = data[COORDINATOR_PROGRAMS]["device"]["meteo_pause_json"]
+        meteo = json.loads(meteo_raw)
+        return float(meteo[0]["wind"])
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
+def _irrigation_variable(data: dict) -> float | None:
+    """Extract the computed irrigation adjustment variable as a percentage.
+
+    Rainvision calculates this coefficient from weather data to modulate
+    program durations. Range is 0–100 (API value 0–1 multiplied by 100).
+    Source: device.meteo_pause_json[0].irrigation_variable from GetProgramNames.
+    """
+    try:
+        meteo_raw = data[COORDINATOR_PROGRAMS]["device"]["meteo_pause_json"]
+        meteo = json.loads(meteo_raw)
+        return round(float(meteo[0]["irrigation_variable"]) * 100, 1)
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
+def _meteo_attrs(data: dict) -> dict:
+    """Return the full meteo_pause_json list as extra attributes.
+
+    Useful for automations that need per-program weather variables.
+    """
+    try:
+        meteo_raw = data[COORDINATOR_PROGRAMS]["device"]["meteo_pause_json"]
+        return json.loads(meteo_raw)
+    except Exception:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# Static sensor descriptors
+# ---------------------------------------------------------------------------
+
+SENSOR_DESCRIPTIONS: tuple[RainvisionSensorDescription, ...] = (
+    RainvisionSensorDescription(
+        key="battery_device",
+        name="Irrigation device battery",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery",
+        value_fn=_battery_device,
+    ),
+    RainvisionSensorDescription(
+        key="battery_cloud",
+        name="Hub battery",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery",
+        value_fn=_battery_cloud,
+    ),
+    RainvisionSensorDescription(
+        key="active_programs",
+        name="Active programs",
+        icon="mdi:calendar-clock",
+        value_fn=_active_programs,
+    ),
+    RainvisionSensorDescription(
+        key="firmware",
+        name="Firmware version",
+        icon="mdi:chip",
+        value_fn=_firmware,
+    ),
+    RainvisionSensorDescription(
+        key="meteo_temperature",
+        name="Weather temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_meteo_temp,
+    ),
+    RainvisionSensorDescription(
+        key="meteo_rain_probability",
+        name="Rain probability",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-rainy",
+        value_fn=_meteo_rain,
+    ),
+    RainvisionSensorDescription(
+        key="meteo_wind",
+        name="Wind speed",
+        native_unit_of_measurement="m/s",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-windy",
+        value_fn=_meteo_wind,
+    ),
+    RainvisionSensorDescription(
+        key="irrigation_variable",
+        name="Irrigation adjustment",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:water-percent",
+        value_fn=_irrigation_variable,
+        # Expose all per-program weather data as attributes
+        attr_fn=_meteo_attrs,
+    ),
+)
+
+# Separate from SENSOR_DESCRIPTIONS because this sensor reads coordinator
+# metadata directly instead of coordinator.data.
+LAST_UPDATE_DESCRIPTION = RainvisionSensorDescription(
+    key="last_update",
+    name="Last data update",
+    device_class=SensorDeviceClass.TIMESTAMP,
+    icon="mdi:clock-check-outline",
+)
 
 
 async def async_setup_entry(
@@ -49,589 +237,141 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up all Rain Vision sensor entities for a config entry.
+    """Set up Rainvision sensor entities from a config entry."""
+    coordinator: RainvisionCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    Called by HA when the integration is loaded. Iterates over all clouds
-    and devices discovered by the coordinator and creates the appropriate
-    sensor instances. Also creates one detail sensor and one zone-duration
-    sensor per program per device.
-
-    Args:
-        hass: The Home Assistant instance.
-        entry: The config entry being set up.
-        async_add_entities: Callback to register new entities with HA.
-    """
-    coordinator: RainVisionCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = []
-
-    for cloud_id, cloud in coordinator.clouds.items():
-        # One battery sensor per Nuvola hub
-        entities.append(RainVisionCloudBatterySensor(coordinator, cloud_id))
-
-        for device in cloud.get("devices", []):
-            device_id = device["id"]
-
-            # Battery and status sensors for each Pure Vision device
-            entities.append(RainVisionDeviceBatterySensor(coordinator, cloud_id, device_id))
-            entities.append(RainVisionActiveProgramsSensor(coordinator, cloud_id, device_id))
-            entities.append(RainVisionMeteoPauseSensor(coordinator, cloud_id, device_id))
-
-            # Program detail sensors + per-zone duration sensors
-            # One RainVisionProgramDetailSensor per program letter (A-H)
-            # One RainVisionProgramZoneDurationSensor per zone per program
-            programs_data = coordinator.programs.get(device_id, [])
-            for prog_info in device.get("fullprogramnames", []):
-                letter = prog_info.get("program_progressive", "")
-                label = prog_info.get("custom_name") or prog_info.get("default_name", letter)
-
-                entities.append(
-                    RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
-                )
-
-                prog_data = next((p for p in programs_data if p.get("name") == letter), None)
-                if prog_data:
-                    for zone in prog_data.get("zones", []):
-                        entities.append(
-                            RainVisionProgramZoneDurationSensor(
-                                coordinator,
-                                cloud_id,
-                                device_id,
-                                letter,
-                                label,
-                                zone_id=zone.get("id"),
-                                zone_name=zone.get("name", f"Zone {zone.get('id')}"),
-                            )
-                        )
-
-    async_add_entities(entities)
-
-
-# ── Device info helpers ───────────────────────────────────────────────────────
-
-def _cloud_device_info(cloud: dict) -> DeviceInfo:
-    """Build a DeviceInfo object for a Nuvola Vision hub.
-
-    Used by cloud-level sensors to associate themselves with the
-    correct device in the HA device registry.
-
-    Args:
-        cloud: Cloud data dict from the coordinator.
-
-    Returns:
-        A DeviceInfo instance identifying the Nuvola hub.
-    """
-    return DeviceInfo(
-        identifiers={(DOMAIN, f"cloud_{cloud['id']}")},
-        name=cloud.get("name", f"Nuvola {cloud['id']}"),
-        manufacturer=MANUFACTURER,
-        model=MODEL_CLOUD,
-        sw_version=cloud.get("firmwarecloud", {}).get("name"),
+    # Add all statically defined sensors
+    async_add_entities(
+        RainvisionSensor(coordinator, description, entry.entry_id)
+        for description in SENSOR_DESCRIPTIONS
     )
 
+    # Add the last-update timestamp sensor (reads coordinator metadata, not data)
+    async_add_entities([RainvisionLastUpdateSensor(coordinator, entry.entry_id)])
 
-def _device_device_info(device: dict, cloud: dict) -> DeviceInfo:
-    """Build a DeviceInfo object for a Pure Vision irrigation controller.
-
-    Links the device to its parent Nuvola hub via via_device, so the
-    HA device registry shows the correct hierarchy.
-
-    Args:
-        device: Device data dict from the coordinator.
-        cloud: Parent cloud data dict (used for via_device linkage).
-
-    Returns:
-        A DeviceInfo instance identifying the Pure Vision controller.
-    """
-    return DeviceInfo(
-        identifiers={(DOMAIN, f"device_{device['id']}")},
-        name=device.get("name", f"Device {device['id']}"),
-        manufacturer=MANUFACTURER,
-        model=device.get("devicetype", {}).get("name", MODEL_DEVICE),
-        sw_version=device.get("firmware", {}).get("name"),
-        via_device=(DOMAIN, f"cloud_{cloud['id']}"),
-    )
+    # Add one sensor per irrigation zone using names from GetZoneNames
+    try:
+        zones_data = coordinator.data[COORDINATOR_PROGRAMS]["device"].get("fullzonenames", [])
+        async_add_entities(
+            RainvisionZoneSensor(coordinator, zone, entry.entry_id)
+            for zone in zones_data
+        )
+    except (KeyError, TypeError):
+        _LOGGER.warning("Could not create zone sensors — zone data unavailable")
 
 
-# ── Sensor classes ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Entity classes
+# ---------------------------------------------------------------------------
 
-class RainVisionCloudBatterySensor(CoordinatorEntity, SensorEntity):
-    """Battery level sensor for a Nuvola Vision cloud hub.
+class RainvisionSensor(CoordinatorEntity[RainvisionCoordinator], SensorEntity):
+    """Generic Rainvision sensor driven by a RainvisionSensorDescription."""
 
-    Reads the 'battery' field from the cloud data dict returned by
-    GetPlaces. The Nuvola hub is a mains-powered device but may have
-    an internal battery for backup; this sensor reflects that value.
-
-    State: integer percentage (0-100).
-    Device: The Nuvola hub identified by cloud_id.
-    """
-
-    _attr_device_class = SensorDeviceClass.BATTERY
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = PERCENTAGE
-
-    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int) -> None:
-        """Initialize the cloud battery sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the Nuvola hub to monitor.
-        """
-        super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._attr_unique_id = f"cloud_{cloud_id}_battery"
-
-    @property
-    def _cloud(self) -> dict:
-        """Return the current cloud data dict from the coordinator."""
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def name(self) -> str:
-        return f"{self._cloud.get('name', 'Nuvola')} Battery"
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the battery percentage, or None if unavailable."""
-        return self._cloud.get("battery")
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _cloud_device_info(self._cloud)
-
-
-class RainVisionDeviceBatterySensor(CoordinatorEntity, SensorEntity):
-    """Battery level sensor for a Pure Vision irrigation controller.
-
-    The Pure Vision is a battery-powered device; this sensor exposes
-    the 'battery' field from the device data returned by GetPlaces.
-    Monitoring this sensor allows automations to alert when the battery
-    is low and irrigation may stop working.
-
-    State: integer percentage (0-100).
-    Device: The Pure Vision controller identified by device_id.
-    """
-
-    _attr_device_class = SensorDeviceClass.BATTERY
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = PERCENTAGE
+    entity_description: RainvisionSensorDescription
 
     def __init__(
         self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
+        coordinator: RainvisionCoordinator,
+        description: RainvisionSensorDescription,
+        entry_id: str,
     ) -> None:
-        """Initialize the device battery sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the parent Nuvola hub (for device linking).
-            device_id: The id of the Pure Vision device to monitor.
-        """
         super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._device_id = device_id
-        self._attr_unique_id = f"device_{device_id}_battery"
-
-    @property
-    def _device(self) -> dict:
-        """Return the current device data dict from the coordinator."""
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        """Return the parent cloud data dict from the coordinator."""
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def name(self) -> str:
-        return f"{self._device.get('name', 'Device')} Battery"
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the battery percentage, or None if unavailable."""
-        return self._device.get("battery")
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_device_info(self._device, self._cloud)
-
-
-class RainVisionActiveProgramsSensor(CoordinatorEntity, SensorEntity):
-    """Sensor showing which irrigation programs are currently enabled.
-
-    Reads the 'active_programs' field from the device data, which is a
-    string like '[A,B,C,D]' listing the currently active program letters.
-
-    State: comma-separated string of active program letters (e.g. 'A, B').
-    Extra attributes: per-program name and active state for all programs.
-    Device: The Pure Vision controller.
-    """
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-    ) -> None:
-        """Initialize the active programs sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the parent Nuvola hub.
-            device_id: The id of the Pure Vision device.
-        """
-        super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._device_id = device_id
-        self._attr_unique_id = f"device_{device_id}_active_programs"
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def name(self) -> str:
-        return f"{self._device.get('name', 'Device')} Active Programs"
-
-    @property
-    def native_value(self) -> str | None:
-        """Return active program letters as a readable string (e.g. 'A, B, D')."""
-        raw = self._device.get("active_programs", "")
-        return raw.strip("[]").replace(",", ", ") if raw else None
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return per-program name and active flag for all programs.
-
-        Attribute keys follow the pattern:
-            program_A, program_A_active, program_B, program_B_active, ...
-        """
-        device = self._device
-        active_raw = device.get("active_programs", "")
-        active_letters = set(active_raw.strip("[]").split(","))
-
-        programs: dict[str, Any] = {}
-        for prog in device.get("fullprogramnames", []):
-            letter = prog.get("program_progressive", "")
-            custom = prog.get("custom_name") or prog.get("default_name", letter)
-            programs[f"program_{letter}"] = custom
-            programs[f"program_{letter}_active"] = letter in active_letters
-
-        return programs
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_device_info(self._device, self._cloud)
-
-
-class RainVisionMeteoPauseSensor(CoordinatorEntity, SensorEntity):
-    """Sensor showing whether a meteo (weather) pause is active.
-
-    Rain Vision can automatically pause irrigation programs when rain
-    or adverse weather is forecast. This sensor reads the 'meteo_pause_json'
-    field from the device data and reports whether any program is currently
-    paused due to weather conditions.
-
-    State: human-readable string ('Active', 'Pause: A, B', or 'Unknown').
-    Extra attributes: full meteo pause data per program.
-    Device: The Pure Vision controller.
-    """
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-    ) -> None:
-        """Initialize the meteo pause sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the parent Nuvola hub.
-            device_id: The id of the Pure Vision device.
-        """
-        super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._device_id = device_id
-        self._attr_unique_id = f"device_{device_id}_meteo_pause"
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def name(self) -> str:
-        return f"{self._device.get('name', 'Device')} Meteo Pause"
-
-    @property
-    def native_value(self) -> str:
-        """Return a readable state string indicating which programs are paused.
-
-        Returns 'Active' if no programs are paused, 'Pause: X, Y' if
-        some programs are paused, or 'Unknown' if the data cannot be parsed.
-        """
-        meteo_json = self._device.get("meteo_pause_json")
-        if not meteo_json:
-            return "No pause"
-        try:
-            programs = json.loads(meteo_json)
-            paused = [p["name"] for p in programs if not p.get("should_run", True)]
-            return f"Pause: {', '.join(paused)}" if paused else "Active"
-        except (json.JSONDecodeError, KeyError):
-            return "Unknown"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the raw meteo pause data as a list of program objects."""
-        meteo_json = self._device.get("meteo_pause_json")
-        if not meteo_json:
-            return {}
-        try:
-            return {"programs": json.loads(meteo_json)}
-        except json.JSONDecodeError:
-            return {}
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_device_info(self._device, self._cloud)
-
-
-class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
-    """Summary sensor for a single irrigation program (A-H).
-
-    Reads from the programs dict populated by the coordinator via
-    GetDeviceProgramList. Provides the next active start time as the
-    main state, plus rich attributes covering all zones, durations,
-    weekdays, and cycle frequency.
-
-    State: Next active start time in 'HH:MM' format, or 'Inactive'.
-    Extra attributes:
-        - active_times: list of enabled start times
-        - zones: list of {name, duration_seconds, duration_minutes, active}
-        - total_duration_minutes: sum of all zone durations
-        - weekdays: list of enabled weekday names (null if cycle-based)
-        - cycle_hours: repeat frequency in hours
-        - type: schedule type ('cycle' or other)
-    Device: The Pure Vision controller.
-    """
-
-    _attr_icon = "mdi:calendar-clock"
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-        program_name: str,
-        program_label: str,
-    ) -> None:
-        """Initialize the program detail sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the parent Nuvola hub.
-            device_id: The id of the Pure Vision device.
-            program_name: Program letter ('A' through 'H').
-            program_label: Human-readable program name (e.g. 'Prato').
-        """
-        super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._device_id = device_id
-        self._program_name = program_name
-        self._program_label = program_label
-        self._attr_unique_id = f"device_{device_id}_program_detail_{program_name}"
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def _program_data(self) -> dict:
-        """Return the program dict for this sensor's program letter, or {}."""
-        programs = self.coordinator.programs.get(self._device_id, [])
-        for p in programs:
-            if p.get("name") == self._program_name:
-                return p
-        return {}
-
-    @property
-    def name(self) -> str:
-        device_name = self._device.get("name", "Device")
-        return f"{device_name} Program {self._program_name} ({self._program_label})"
-
-    @property
-    def native_value(self) -> str:
-        """Return the first active start time, or 'Inactive' if none are enabled."""
-        prog = self._program_data
-        if not prog:
-            return "Unknown"
-        for t in prog.get("times", []):
-            if t.get("active"):
-                return t.get("time", "Inactive")
-        return "Inactive"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return full program details as HA state attributes."""
-        prog = self._program_data
-        if not prog:
-            return {}
-
-        active_times = [
-            t["time"] for t in prog.get("times", []) if t.get("active")
-        ]
-
-        zones = []
-        total_seconds = 0
-        for z in prog.get("zones", []):
-            duration_s = z.get("duration", 0)
-            duration_m = round(duration_s / 60, 1)
-            total_seconds += duration_s
-            zones.append({
-                "name": z.get("name"),
-                "id": z.get("id"),
-                "duration_seconds": duration_s,
-                "duration_minutes": duration_m,
-                "active": duration_s > 0,
-            })
-
-        weekdays = [
-            d["name"] for d in prog.get("weekdays", []) if d.get("isChecked")
-        ]
-
-        cycle_hours = prog.get("cycle")
-        try:
-            cycle_hours = int(cycle_hours)
-        except (TypeError, ValueError):
-            cycle_hours = None
-
-        return {
-            "active_times": active_times,
-            "zones": zones,
-            "total_duration_minutes": round(total_seconds / 60, 1),
-            "weekdays": weekdays if weekdays else None,
-            "cycle_hours": cycle_hours,
-            "type": prog.get("type"),
-        }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_device_info(self._device, self._cloud)
-
-
-class RainVisionProgramZoneDurationSensor(CoordinatorEntity, SensorEntity):
-    """Duration sensor for one zone within one irrigation program.
-
-    Created for each (program, zone) combination found in GetDeviceProgramList.
-    For example, with 4 zones and 4 programs (A-D), 16 of these sensors
-    are created per device.
-
-    Provides the duration assigned to that specific zone in that specific
-    program, in minutes. A value of 0 means the zone is not irrigated
-    in that program.
-
-    State: float minutes (e.g. 15.0).
-    Extra attributes: duration in seconds, active flag, zone id, program info.
-    Device: The Pure Vision controller.
-    """
-
-    _attr_icon = "mdi:timer-outline"
-    _attr_native_unit_of_measurement = "min"
-    _attr_state_class = SensorStateClass.MEASUREMENT
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-        program_name: str,
-        program_label: str,
-        zone_id: int,
-        zone_name: str,
-    ) -> None:
-        """Initialize the program zone duration sensor.
-
-        Args:
-            coordinator: The shared data coordinator.
-            cloud_id: The id of the parent Nuvola hub.
-            device_id: The id of the Pure Vision device.
-            program_name: Program letter ('A' through 'H').
-            program_label: Human-readable program name.
-            zone_id: Zone id as used by the API (1, 2, 4, or 8).
-            zone_name: Human-readable zone name (e.g. 'Prato 1').
-        """
-        super().__init__(coordinator)
-        self._cloud_id = cloud_id
-        self._device_id = device_id
-        self._program_name = program_name
-        self._program_label = program_label
-        self._zone_id = zone_id
-        self._zone_name = zone_name
-        self._attr_unique_id = (
-            f"device_{device_id}_program_{program_name}_zone_{zone_id}_duration"
+        self.entity_description = description
+        self._attr_unique_id = f"{entry_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.device_puid)},
+            name="Rainvision",
+            manufacturer="Rainvision",
+            model="PURE VISION-EV",
         )
 
     @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
+    def native_value(self) -> Any:
+        """Call the descriptor's value_fn with the latest coordinator data."""
+        if self.entity_description.value_fn:
+            return self.entity_description.value_fn(self.coordinator.data)
+        return None
 
     @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
+    def extra_state_attributes(self) -> dict | None:
+        """Call the descriptor's attr_fn if present."""
+        if self.entity_description.attr_fn:
+            return self.entity_description.attr_fn(self.coordinator.data)
+        return None
+
+
+class RainvisionZoneSensor(CoordinatorEntity[RainvisionCoordinator], SensorEntity):
+    """Sensor representing a single irrigation zone.
+
+    Created dynamically at setup time based on the zones returned by
+    GetZoneNames → device.fullzonenames.
+    The entity name uses the user-defined custom_name when available,
+    falling back to the API's default_name.
+    """
+
+    def __init__(
+        self,
+        coordinator: RainvisionCoordinator,
+        zone_data: dict,
+        entry_id: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._zone = zone_data
+        zone_id = zone_data.get("zone_progressive", zone_data.get("id", "?"))
+        self._attr_unique_id = f"{entry_id}_zone_{zone_id}"
+        self._attr_name = (
+            zone_data.get("custom_name") or zone_data.get("default_name", f"Zone {zone_id}")
+        )
+        self._attr_icon = "mdi:sprinkler"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.device_puid)},
+            name="Rainvision",
+            manufacturer="Rainvision",
+            model="PURE VISION-EV",
+        )
 
     @property
-    def _zone_data(self) -> dict:
-        """Return the zone dict for this sensor's program+zone combination, or {}."""
-        programs = self.coordinator.programs.get(self._device_id, [])
-        for p in programs:
-            if p.get("name") == self._program_name:
-                for z in p.get("zones", []):
-                    if z.get("id") == self._zone_id:
-                        return z
-        return {}
+    def native_value(self) -> str:
+        """Return the zone's display name as the state value."""
+        return self._zone.get("custom_name") or self._zone.get("default_name", "—")
 
     @property
-    def name(self) -> str:
-        device_name = self._device.get("name", "Device")
-        return f"{device_name} Prog {self._program_name} {self._zone_name} Duration"
-
-    @property
-    def native_value(self) -> float | None:
-        """Return zone duration in minutes, or None if data is unavailable."""
-        zone = self._zone_data
-        if not zone:
-            return None
-        return round(zone.get("duration", 0) / 60, 1)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return duration in both seconds and minutes, plus metadata."""
-        zone = self._zone_data
-        if not zone:
-            return {}
-        duration_s = zone.get("duration", 0)
+    def extra_state_attributes(self) -> dict:
+        """Expose zone metadata for use in automations and templates."""
         return {
-            "duration_seconds": duration_s,
-            "duration_minutes": round(duration_s / 60, 1),
-            "active": duration_s > 0,
-            "zone_id": self._zone_id,
-            "program": self._program_name,
-            "program_label": self._program_label,
+            "zone_progressive": self._zone.get("zone_progressive"),
+            "default_name": self._zone.get("default_name"),
+            "custom_name": self._zone.get("custom_name"),
         }
 
+
+class RainvisionLastUpdateSensor(CoordinatorEntity[RainvisionCoordinator], SensorEntity):
+    """Timestamp sensor that exposes when the coordinator last fetched data.
+
+    Uses coordinator.last_update_success_time, which HA's DataUpdateCoordinator
+    sets automatically after every successful _async_update_data() call.
+    The value is a timezone-aware datetime; HA displays it using the user's
+    configured timezone. device_class=TIMESTAMP enables the history graph and
+    "time ago" rendering in the frontend.
+    """
+
+    def __init__(self, coordinator: RainvisionCoordinator, entry_id: str) -> None:
+        super().__init__(coordinator)
+        self.entity_description = LAST_UPDATE_DESCRIPTION
+        self._attr_unique_id = f"{entry_id}_last_update"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.device_puid)},
+            name="Rainvision",
+            manufacturer="Rainvision",
+            model="PURE VISION-EV",
+        )
+
     @property
-    def device_info(self) -> DeviceInfo:
-        return _device_device_info(self._device, self._cloud)
+    def native_value(self) -> datetime | None:
+        """Return the timestamp of the last successful coordinator update.
+
+        last_update_success_time is a UTC-aware datetime set by the base
+        DataUpdateCoordinator class. Returns None if no successful update has
+        occurred yet (e.g. during the very first startup before data arrives).
+        """
+        return self.coordinator.last_update_success_time

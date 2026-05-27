@@ -1,88 +1,116 @@
-# Rain Vision — Custom Component per Home Assistant
+# Rainvision — Integrazione Home Assistant
 
-Integrazione non ufficiale per il sistema di irrigazione smart **Rain Vision** di [RAIN S.p.A.](https://www.rain.it) in Home Assistant.
+Integrazione custom per Home Assistant che si connette alle API cloud di **Rainvision v5** per monitorare il tuo impianto di irrigazione smart.
 
----
+## Entità create
 
-## Funzionalità
-
-### Sensori
+### Sensori (`sensor`)
 | Entità | Descrizione |
 |---|---|
-| `sensor.<device>_batteria` | Livello batteria del dispositivo (%) |
-| `sensor.<nuvola>_batteria` | Livello batteria dell'hub Nuvola (%) |
-| `sensor.<device>_programmi_attivi` | Programmi attualmente abilitati (A/B/C/D) |
-| `sensor.<device>_pausa_meteo` | Stato pausa meteo per ogni programma |
+| `sensor.rainvision_batteria_irrigatore` | Batteria del dispositivo PURE VISION-EV (%) |
+| `sensor.rainvision_batteria_nuvola` | Batteria della Nuvola (%) |
+| `sensor.rainvision_programmi_attivi` | Programmi attualmente attivi (es. `A B C D`) |
+| `sensor.rainvision_versione_firmware` | ID firmware installato |
+| `sensor.rainvision_temperatura_meteo` | Temperatura meteo dal servizio previsioni (°C) |
+| `sensor.rainvision_probabilita_pioggia` | Probabilità di pioggia (%) |
+| `sensor.rainvision_vento` | Velocità vento (m/s) |
+| `sensor.rainvision_variabile_irrigazione` | Variabile di aggiustamento irrigazione basata sul meteo (%) |
+| `sensor.rainvision_prato_1` | Zona "Prato 1" |
+| `sensor.rainvision_prato_2` | Zona "Prato 2" |
+| `sensor.rainvision_piante` | Zona "Piante" |
+| `sensor.rainvision_orto` | Zona "Orto" |
 
-### Switch
+### Binary sensor (`binary_sensor`)
 | Entità | Descrizione |
 |---|---|
-| `switch.<device>_<zona>` | Avvia/ferma irrigazione manuale su una zona |
-| `switch.<device>_programma_<X>` | Abilita/disabilita un programma di irrigazione |
+| `binary_sensor.rainvision_connesso_al_cloud` | Connettività cloud |
+| `binary_sensor.rainvision_programma_a_meteo_ok` | Il meteo consente l'esecuzione del programma A |
+| `binary_sensor.rainvision_programma_b_meteo_ok` | Il meteo consente l'esecuzione del programma B |
+
+### Switch (`switch`)
+| Entità | Descrizione |
+|---|---|
+| `switch.rainvision_programma_a` | Stato programma A (sola lettura) |
+| `switch.rainvision_programma_b` | Stato programma B (sola lettura) |
+| `switch.rainvision_programma_c` | Stato programma C (sola lettura) |
+| `switch.rainvision_programma_d` | Stato programma D (sola lettura) |
+
+> **Nota:** gli switch riflettono lo stato attivo dei programmi ma non possono attivare/disattivare i programmi via cloud (l'API Rainvision non espone questo endpoint). Usa i switch come condizioni nelle automazioni HA.
 
 ---
 
 ## Installazione
 
-### Tramite HACS (consigliato)
-1. Apri HACS → Integrazioni → Menu (⋮) → Repository personalizzati
-2. Aggiungi l'URL del repository e seleziona categoria **Integrazione**
-3. Cerca "Rain Vision" e installala
+### Metodo 1 — HACS (consigliato)
+1. In HACS → **Integrations** → menu ⋮ → **Custom repositories**
+2. Aggiungi l'URL del repository, categoria `Integration`
+3. Cerca "Rainvision" e installa
 4. Riavvia Home Assistant
 
-### Manuale
-1. Copia la cartella `custom_components/rainvision` nella tua cartella `config/custom_components/`
+### Metodo 2 — Manuale
+1. Copia la cartella `custom_components/rainvision/` in `<config>/custom_components/`
 2. Riavvia Home Assistant
 
 ---
 
 ## Configurazione
 
-1. Vai su **Impostazioni → Dispositivi e servizi → Aggiungi integrazione**
-2. Cerca **Rain Vision**
-3. Inserisci email e password del tuo account rainvision.it
-4. Conferma — le entità verranno create automaticamente
+1. **Impostazioni → Dispositivi e servizi → Aggiungi integrazione**
+2. Cerca **Rainvision**
+3. Inserisci:
+   - **Email** e **Password** del tuo account rainvision.it
+   - **PUID Nuvola**: il PUID del tuo hub NUVOLA VISION (inizia con `2000...`)
+   - **PUID Irrigatore**: il PUID del tuo irrigatore PURE VISION (inizia con `1000...`)
+
+> I PUID si trovano nell'app Rainvision → dettaglio dispositivo, oppure nel file HAR di questa configurazione.
 
 ---
 
-## Struttura entità
+## Dove trovare i PUID
 
-Per ogni impianto configurato vengono create:
+- **PUID Nuvola**: `nuvola/stat` → campo `cloud.puid`
+- **PUID Irrigatore**: `nuvola/device` → campo `device.puid`
 
-- **1 dispositivo Nuvola** (hub Wi-Fi) con sensore batteria
-- **1 dispositivo Pure Vision** per ogni centralina, con:
-  - Sensore batteria
-  - Sensore programmi attivi
-  - Sensore pausa meteo
-  - Switch per ogni zona (es. Prato 1, Prato 2, Piante, Orto)
-  - Switch per ogni programma (A/B/C/D)
+Esempio dai tuoi dati:
+- Cloud PUID: `2000001121`
+- Device PUID: `1000005059`
 
 ---
 
-## ⚠️ Note importanti
+## Automazione esempio
 
-### Endpoint comandi da verificare
-Gli endpoint `ManualStart`, `ManualStop` e `SetProgramActive` sono stati dedotti dalla struttura dell'API. **Prima di usare gli switch**, verifica con DevTools quali URL vengono chiamati quando:
-- Avvii un'irrigazione manuale
-- Fermi un'irrigazione
-- Abiliti/disabiliti un programma
+```yaml
+# Sospendi le notifiche se sta per piovere
+automation:
+  - alias: "Rainvision - avviso irrigazione annullata"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.rainvision_programma_a_meteo_ok
+        to: "off"
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "Rainvision"
+          message: "Il programma A è stato sospeso per pioggia prevista"
+```
 
-Poi aggiorna `api.py` con gli URL corretti.
-
-### Token di autenticazione
-Il token viene salvato nella config entry e riutilizzato. Se scade, il componente tenta automaticamente un nuovo login con email e password.
-
-### Polling
-I dati vengono aggiornati ogni **60 secondi** (modificabile in `const.py` → `UPDATE_INTERVAL`).
+```yaml
+# Aggiorna dashboard con batteria bassa
+automation:
+  - alias: "Rainvision - batteria bassa irrigatore"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.rainvision_batteria_irrigatore
+        below: 20
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Rainvision"
+          message: "Batteria irrigatore al {{ states('sensor.rainvision_batteria_irrigatore') }}%"
+```
 
 ---
 
-## Sviluppo e contributi
+## Intervallo aggiornamento
 
-Il file `manual` nel JSON del dispositivo è una stringa hex che codifica lo stato delle zone. Se trovi la decodifica corretta, apri una PR!
-
----
-
-## Disclaimer
-
-Questa è un'integrazione **non ufficiale**, non affiliata con RAIN S.p.A. Usala a tuo rischio.
+Di default ogni **60 secondi**. Modifica `SCAN_INTERVAL_SECONDS` in `const.py` se necessario.
