@@ -1,0 +1,13 @@
+{
+  "domain": "rainvision",
+  "name": "Rainvision",
+  "version": "1.0.0",
+  "documentation": "https://github.com/your-user/rainvision-ha",
+  "issue_tracker": "https://github.com/your-user/rainvision-ha/issues",
+  "dependencies": [],
+  "codeowners": ["@your-user"],
+  "requirements": [],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "homeassistant": "2024.1.0"
+}
