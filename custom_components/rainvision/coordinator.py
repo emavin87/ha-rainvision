@@ -24,10 +24,10 @@ class RainVisionCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
         self.api = api
-        # Parsed data structures populated after first fetch
         self.places: list[dict] = []
-        self.clouds: dict[int, dict] = {}   # cloud_id -> cloud data
-        self.devices: dict[int, dict] = {}  # device_id -> device data
+        self.clouds: dict[int, dict] = {}    # cloud_id -> cloud data
+        self.devices: dict[int, dict] = {}   # device_id -> device data
+        self.programs: dict[int, list] = {}  # device_id -> list of programs
 
     async def _async_update_data(self) -> dict:
         """Fetch data from Rain Vision API."""
@@ -48,12 +48,25 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                 self.clouds[cloud_id] = cloud
                 for device in cloud.get("devices", []):
                     device_id = device["id"]
-                    # Attach parent cloud_id for easy reference
                     device["_cloud_id"] = cloud_id
                     self.devices[device_id] = device
+
+                    # Fetch full program list for each device
+                    puid = device.get("puid")
+                    if puid:
+                        try:
+                            programs = await self.api.get_device_program_list(puid)
+                            self.programs[device_id] = programs
+                        except (RainVisionApiError, RainVisionAuthError) as err:
+                            _LOGGER.warning(
+                                "Impossibile caricare programmi per device %s: %s",
+                                device_id, err,
+                            )
+                            self.programs.setdefault(device_id, [])
 
         return {
             "places": places,
             "clouds": self.clouds,
             "devices": self.devices,
+            "programs": self.programs,
         }

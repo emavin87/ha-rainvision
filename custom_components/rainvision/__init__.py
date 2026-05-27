@@ -22,21 +22,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
     api = RainVisionApi(session)
 
-    # Try stored token first, re-authenticate if needed
-    token = entry.data.get(CONF_TOKEN)
-    if token:
-        api.token = token
-    else:
-        try:
-            token = await api.authenticate(
-                entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]
-            )
+    email = entry.data[CONF_EMAIL]
+    password = entry.data[CONF_PASSWORD]
+    stored_token = entry.data.get(CONF_TOKEN)
+
+    # Set stored token then verify it, re-authenticate if expired
+    if stored_token:
+        api.token = stored_token
+
+    try:
+        token = await api.ensure_authenticated(email, password)
+        # Persist refreshed token if it changed
+        if token != stored_token:
             hass.config_entries.async_update_entry(
                 entry, data={**entry.data, CONF_TOKEN: token}
             )
-        except (RainVisionAuthError, RainVisionApiError) as err:
-            _LOGGER.error("Rain Vision: impossibile autenticarsi: %s", err)
-            return False
+    except (RainVisionAuthError, RainVisionApiError) as err:
+        _LOGGER.error("Rain Vision: impossibile autenticarsi: %s", err)
+        return False
 
     coordinator = RainVisionCoordinator(hass, api)
     await coordinator.async_config_entry_first_refresh()

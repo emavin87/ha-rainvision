@@ -1,6 +1,7 @@
 """Rain Vision API client."""
 from __future__ import annotations
 
+import datetime
 import logging
 import uuid
 from typing import Any
@@ -47,7 +48,7 @@ class RainVisionApi:
         return headers
 
     async def authenticate(self, email: str, password: str) -> str:
-        """Login via check-token and return api_token."""
+        """Login via /token and return api_token."""
         device_name = f"web-{uuid.uuid4()}"
         payload = {
             "email": email,
@@ -73,6 +74,30 @@ class RainVisionApi:
         except aiohttp.ClientError as err:
             raise RainVisionApiError(f"Errore di connessione: {err}") from err
 
+    async def check_token(self) -> bool:
+        """Check if the current token is still valid via /check-token.
+        
+        Returns True if valid, False if expired/invalid.
+        """
+        if not self._token:
+            return False
+        try:
+            async with self._session.post(
+                f"{BASE_URL}/check-token",
+                headers=self._auth_headers(),
+            ) as resp:
+                return resp.status == 200
+        except aiohttp.ClientError:
+            return False
+
+    async def ensure_authenticated(self, email: str, password: str) -> str:
+        """Check token validity and re-authenticate if needed."""
+        valid = await self.check_token()
+        if not valid:
+            _LOGGER.info("Token Rain Vision scaduto, rinnovo...")
+            return await self.authenticate(email, password)
+        return self._token
+
     async def get_places(self) -> list[dict]:
         """Return list of places with clouds and devices."""
         try:
@@ -87,6 +112,29 @@ class RainVisionApi:
                 data = await resp.json()
                 places = data.get("self_places", []) + data.get("places", [])
                 return places
+        except aiohttp.ClientError as err:
+            raise RainVisionApiError(f"Errore di connessione: {err}") from err
+
+    async def get_device_program_list(self, puid: str) -> list[dict]:
+        """Return full program list for a device using its puid (e.g. '1000005059')."""
+        tz_offset = datetime.datetime.now().astimezone().strftime("%z")
+        offset_str = f"GMT{tz_offset[:3]}:{tz_offset[3:]}"
+        payload = {
+            "id": puid,
+            "offset": offset_str,
+        }
+        try:
+            async with self._session.post(
+                f"{BASE_URL}/GetDeviceProgramList",
+                json=payload,
+                headers=self._auth_headers(),
+            ) as resp:
+                if resp.status == 401:
+                    raise RainVisionAuthError("Token non valido o scaduto")
+                if resp.status != 200:
+                    raise RainVisionApiError(f"Errore HTTP {resp.status}")
+                data = await resp.json()
+                return data.get("programs", [])
         except aiohttp.ClientError as err:
             raise RainVisionApiError(f"Errore di connessione: {err}") from err
 
@@ -145,7 +193,7 @@ class RainVisionApi:
         program: str,
         active: bool,
     ) -> bool:
-        """Enable or disable a program (A/B/C/D)."""
+        """Enable or disable a program (A-H)."""
         payload = {
             "cloud_id": cloud_id,
             "device_id": device_id,

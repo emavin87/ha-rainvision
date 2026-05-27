@@ -44,6 +44,13 @@ async def async_setup_entry(
             entities.append(RainVisionActiveProgramsSensor(coordinator, cloud_id, device_id))
             # Meteo pause sensor
             entities.append(RainVisionMeteoPauseSensor(coordinator, cloud_id, device_id))
+            # Program detail sensors (one per program A-H)
+            for prog_info in device.get("fullprogramnames", []):
+                letter = prog_info.get("program_progressive", "")
+                label = prog_info.get("custom_name") or prog_info.get("default_name", letter)
+                entities.append(
+                    RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
+                )
 
     async_add_entities(entities)
 
@@ -238,6 +245,104 @@ class RainVisionMeteoPauseSensor(CoordinatorEntity, SensorEntity):
             return {"programs": json.loads(meteo_json)}
         except json.JSONDecodeError:
             return {}
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_device_info(self._device, self._cloud)
+
+
+class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
+    """Sensor showing detail of a single irrigation program (A-H)."""
+
+    _attr_icon = "mdi:calendar-clock"
+
+    def __init__(
+        self,
+        coordinator: RainVisionCoordinator,
+        cloud_id: int,
+        device_id: int,
+        program_name: str,
+        program_label: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._cloud_id = cloud_id
+        self._device_id = device_id
+        self._program_name = program_name   # "A", "B", ...
+        self._program_label = program_label  # "Prato", "Piante", ...
+        self._attr_unique_id = f"device_{device_id}_program_detail_{program_name}"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def _program_data(self) -> dict:
+        programs = self.coordinator.programs.get(self._device_id, [])
+        for p in programs:
+            if p.get("name") == self._program_name:
+                return p
+        return {}
+
+    @property
+    def name(self) -> str:
+        device_name = self._device.get("name", "Device")
+        return f"{device_name} Programma {self._program_name} ({self._program_label})"
+
+    @property
+    def native_value(self) -> str:
+        """Return next active start time or 'Inattivo'."""
+        prog = self._program_data
+        if not prog:
+            return "Sconosciuto"
+        for t in prog.get("times", []):
+            if t.get("active"):
+                return t.get("time", "Inattivo")
+        return "Inattivo"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        prog = self._program_data
+        if not prog:
+            return {}
+
+        # Active start times
+        active_times = [
+            t["time"] for t in prog.get("times", []) if t.get("active")
+        ]
+
+        # Zones with duration in minutes
+        zones = [
+            {
+                "zona": z.get("name"),
+                "durata_minuti": round(z.get("duration", 0) / 60, 1),
+            }
+            for z in prog.get("zones", [])
+            if z.get("duration", 0) > 0
+        ]
+
+        # Active weekdays
+        weekdays = [
+            d["name"] for d in prog.get("weekdays", []) if d.get("isChecked")
+        ]
+
+        # Cycle frequency
+        cycle_hours = prog.get("cycle")
+        try:
+            cycle_hours = int(cycle_hours)
+        except (TypeError, ValueError):
+            cycle_hours = None
+
+        return {
+            "orari_attivi": active_times,
+            "zone": zones,
+            "giorni_settimana": weekdays if weekdays else None,
+            "ciclo_ore": cycle_hours,
+            "tipo": prog.get("type"),
+        }
 
     @property
     def device_info(self) -> DeviceInfo:
