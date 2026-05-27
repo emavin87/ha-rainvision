@@ -56,7 +56,7 @@ class RainVisionApi:
         }
         try:
             async with self._session.post(
-                f"{BASE_URL}/check-token",
+                f"{BASE_URL}/token",
                 json=payload,
                 headers=HEADERS_BASE,
             ) as resp:
