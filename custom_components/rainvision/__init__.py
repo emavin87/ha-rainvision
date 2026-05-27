@@ -12,49 +12,74 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import RainVisionApi, RainVisionAuthError, RainVisionApiError
-from .const import DOMAIN, CONF_TOKEN
+from .const import DOMAIN, CONF_TOKEN, DEFAULT_MANUAL_DURATION
 from .coordinator import RainVisionCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
 
 PROGRAMS_LIST = ["A", "B", "C", "D", "E", "F", "G", "H"]
 ZONE_IDS = [1, 2, 4, 8]
 
-# Service schemas
+# ── Service names ─────────────────────────────────────────────────────────────
+SVC_MANUAL_START      = "manual_start"
+SVC_MANUAL_STOP       = "manual_stop"
 SVC_SET_ZONE_DURATION = "set_zone_duration"
 SVC_SET_START_TIME    = "set_program_start_time"
 SVC_SET_CYCLE         = "set_program_cycle"
 SVC_SET_WEEKDAYS      = "set_program_weekdays"
 SVC_SET_PROGRAMS      = "set_programs"
 
-_BASE = {
+# ── Shared base schema for program-level services ─────────────────────────────
+_PROG_BASE = {
     vol.Required("device_puid"): cv.string,
     vol.Required("program"): vol.In(PROGRAMS_LIST),
 }
 
+# ── Service validation schemas ────────────────────────────────────────────────
+
+SCHEMA_MANUAL_START = vol.Schema({
+    vol.Required("cloud_id"): vol.Coerce(int),
+    vol.Required("device_id"): vol.Coerce(int),
+    vol.Required("zone"): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
+    vol.Optional("duration_minutes", default=DEFAULT_MANUAL_DURATION): vol.All(
+        vol.Coerce(int), vol.Range(min=1, max=120)
+    ),
+})
+
+SCHEMA_MANUAL_STOP = vol.Schema({
+    vol.Required("cloud_id"): vol.Coerce(int),
+    vol.Required("device_id"): vol.Coerce(int),
+})
+
 SCHEMA_SET_ZONE_DURATION = vol.Schema({
-    **_BASE,
+    **_PROG_BASE,
     vol.Required("zone_id"): vol.In(ZONE_IDS),
-    vol.Required("duration_seconds"): vol.All(int, vol.Range(min=0, max=7200)),
+    vol.Required("duration_seconds"): vol.All(
+        vol.Coerce(int), vol.Range(min=0, max=7200)
+    ),
 })
 
 SCHEMA_SET_START_TIME = vol.Schema({
-    **_BASE,
-    vol.Required("time_index"): vol.All(int, vol.Range(min=0, max=5)),
-    vol.Required("time"): cv.string,   # "HH:MM"
+    **_PROG_BASE,
+    vol.Required("time_index"): vol.All(
+        vol.Coerce(int), vol.Range(min=0, max=5)
+    ),
+    vol.Required("time"): cv.string,    # "HH:MM"
     vol.Required("active"): cv.boolean,
 })
 
 SCHEMA_SET_CYCLE = vol.Schema({
-    **_BASE,
-    vol.Required("cycle_hours"): vol.All(int, vol.Range(min=1, max=168)),
+    **_PROG_BASE,
+    vol.Required("cycle_hours"): vol.All(
+        vol.Coerce(int), vol.Range(min=1, max=168)
+    ),
 })
 
 SCHEMA_SET_WEEKDAYS = vol.Schema({
-    **_BASE,
-    vol.Required("weekdays"): [vol.All(int, vol.Range(min=1, max=7))],
+    **_PROG_BASE,
+    vol.Required("weekdays"): [vol.All(vol.Coerce(int), vol.Range(min=1, max=7))],
 })
 
 SCHEMA_SET_PROGRAMS = vol.Schema({
@@ -82,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 entry, data={**entry.data, CONF_TOKEN: token}
             )
     except (RainVisionAuthError, RainVisionApiError) as err:
-        _LOGGER.error("Rain Vision: impossibile autenticarsi: %s", err)
+        _LOGGER.error("Rain Vision: cannot authenticate: %s", err)
         return False
 
     coordinator = RainVisionCoordinator(hass, api)
@@ -92,31 +117,68 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # ── helpers ──────────────────────────────────────────────────────────────
+    # ── Helper: run API call, refresh coordinator on success ──────────────────
 
     async def _call(coro, label: str) -> None:
-        """Execute an API coroutine, refresh coordinator on success."""
         try:
             success = await coro
             if success:
                 await coordinator.async_request_refresh()
-                _LOGGER.info("Rain Vision: %s aggiornato", label)
+                _LOGGER.info("Rain Vision: %s succeeded", label)
             else:
-                _LOGGER.error("Rain Vision: %s fallito (risposta negativa)", label)
+                _LOGGER.error("Rain Vision: %s failed (negative response)", label)
         except (RainVisionApiError, RainVisionAuthError) as err:
-            _LOGGER.error("Rain Vision: errore %s: %s", label, err)
+            _LOGGER.error("Rain Vision: error in %s: %s", label, err)
 
-    # ── service handlers ─────────────────────────────────────────────────────
+    # ── Service handlers ──────────────────────────────────────────────────────
+
+    async def handle_manual_start(call: ServiceCall) -> None:
+        """Start manual irrigation on a specific zone.
+
+        Example:
+          service: rainvision.manual_start
+          data:
+            cloud_id: 1099
+            device_id: 5644
+            zone: 1
+            duration_minutes: 10
+        """
+        await _call(
+            api.manual_start_zone(
+                call.data["cloud_id"],
+                call.data["device_id"],
+                call.data["zone"],
+                call.data["duration_minutes"],
+            ),
+            SVC_MANUAL_START,
+        )
+
+    async def handle_manual_stop(call: ServiceCall) -> None:
+        """Stop all manual irrigation on a device.
+
+        Example:
+          service: rainvision.manual_stop
+          data:
+            cloud_id: 1099
+            device_id: 5644
+        """
+        await _call(
+            api.manual_stop(
+                call.data["cloud_id"],
+                call.data["device_id"],
+            ),
+            SVC_MANUAL_STOP,
+        )
 
     async def handle_set_zone_duration(call: ServiceCall) -> None:
-        """rainvision.set_zone_duration — modifica durata di una zona.
+        """Update irrigation duration for one zone in a program.
 
-        Esempio:
+        Example:
           service: rainvision.set_zone_duration
           data:
             device_puid: "1000005059"
             program: "A"
-            zone_id: 1          # 1=Zona1, 2=Zona2, 4=Zona3, 8=Zona4
+            zone_id: 1
             duration_seconds: 900
         """
         await _call(
@@ -126,19 +188,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 call.data["zone_id"],
                 call.data["duration_seconds"],
             ),
-            "set_zone_duration",
+            SVC_SET_ZONE_DURATION,
         )
 
     async def handle_set_start_time(call: ServiceCall) -> None:
-        """rainvision.set_program_start_time — modifica orario di partenza.
+        """Update a start time slot for a program.
 
-        Ogni programma ha fino a 6 slot orari (time_index 0-5).
-        Esempio:
+        Each program has up to 6 time slots (time_index 0-5).
+
+        Example:
           service: rainvision.set_program_start_time
           data:
             device_puid: "1000005059"
             program: "A"
-            time_index: 0       # primo slot
+            time_index: 0
             time: "06:30"
             active: true
         """
@@ -150,18 +213,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 call.data["time"],
                 call.data["active"],
             ),
-            "set_program_start_time",
+            SVC_SET_START_TIME,
         )
 
     async def handle_set_cycle(call: ServiceCall) -> None:
-        """rainvision.set_program_cycle — modifica ogni quante ore parte il programma.
+        """Update how often a program repeats (cycle frequency in hours).
 
-        Esempio:
+        Example:
           service: rainvision.set_program_cycle
           data:
             device_puid: "1000005059"
             program: "A"
-            cycle_hours: 48     # ogni 2 giorni
+            cycle_hours: 48
         """
         await _call(
             api.set_program_cycle(
@@ -169,18 +232,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 call.data["program"],
                 call.data["cycle_hours"],
             ),
-            "set_program_cycle",
+            SVC_SET_CYCLE,
         )
 
     async def handle_set_weekdays(call: ServiceCall) -> None:
-        """rainvision.set_program_weekdays — modifica i giorni della settimana.
+        """Update the weekdays on which a program runs.
 
-        Esempio:
+        Day indexes: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+
+        Example:
           service: rainvision.set_program_weekdays
           data:
             device_puid: "1000005059"
             program: "A"
-            weekdays: [2, 4, 6]  # Lunedì, Mercoledì, Venerdì
+            weekdays: [2, 4, 6]
         """
         await _call(
             api.set_program_weekdays(
@@ -188,22 +253,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 call.data["program"],
                 call.data["weekdays"],
             ),
-            "set_program_weekdays",
+            SVC_SET_WEEKDAYS,
         )
 
     async def handle_set_programs(call: ServiceCall) -> None:
-        """rainvision.set_programs — invia payload completo di programmi."""
+        """Send a full programs payload to the device.
+
+        Example:
+          service: rainvision.set_programs
+          data:
+            device_puid: "1000005059"
+            programs: [...]
+        """
         await _call(
             api.set_device_programs(
                 call.data["device_puid"],
                 call.data["programs"],
             ),
-            "set_programs",
+            SVC_SET_PROGRAMS,
         )
 
-    # ── register ─────────────────────────────────────────────────────────────
+    # ── Register all services ─────────────────────────────────────────────────
 
     for name, handler, schema in [
+        (SVC_MANUAL_START,      handle_manual_start,      SCHEMA_MANUAL_START),
+        (SVC_MANUAL_STOP,       handle_manual_stop,       SCHEMA_MANUAL_STOP),
         (SVC_SET_ZONE_DURATION, handle_set_zone_duration, SCHEMA_SET_ZONE_DURATION),
         (SVC_SET_START_TIME,    handle_set_start_time,    SCHEMA_SET_START_TIME),
         (SVC_SET_CYCLE,         handle_set_cycle,         SCHEMA_SET_CYCLE),

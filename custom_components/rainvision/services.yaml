@@ -1,12 +1,81 @@
+manual_start:
+  name: Avvia irrigazione manuale
+  description: >
+    Avvia manualmente l'irrigazione su una zona specifica per una durata definita.
+    Trovi cloud_id e device_id negli attributi delle entità select
+    "Rain Vision — Seleziona Hub Nuvola" e "Rain Vision — Seleziona Dispositivo".
+  fields:
+    cloud_id:
+      name: Cloud ID (Nuvola)
+      description: ID dell'hub Nuvola Vision (visibile negli attributi della select "Seleziona Hub Nuvola")
+      required: true
+      example: 1099
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID (Pure Vision)
+      description: ID del dispositivo Pure Vision (visibile negli attributi della select "Seleziona Dispositivo")
+      required: true
+      example: 5644
+      selector:
+        number:
+          min: 1
+          mode: box
+    zone:
+      name: Zona
+      description: Numero della zona da irrigare (1-8)
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 8
+          step: 1
+    duration_minutes:
+      name: Durata (minuti)
+      description: Per quanti minuti irrigare (default 10, max 120)
+      required: false
+      example: 10
+      selector:
+        number:
+          min: 1
+          max: 120
+          step: 1
+          unit_of_measurement: "min"
+
+manual_stop:
+  name: Ferma irrigazione manuale
+  description: >
+    Ferma immediatamente tutta l'irrigazione manuale in corso sul dispositivo.
+  fields:
+    cloud_id:
+      name: Cloud ID (Nuvola)
+      description: ID dell'hub Nuvola Vision
+      required: true
+      example: 1099
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID (Pure Vision)
+      description: ID del dispositivo Pure Vision
+      required: true
+      example: 5644
+      selector:
+        number:
+          min: 1
+          mode: box
+
 set_zone_duration:
   name: Imposta durata zona
-  description: >
-    Modifica la durata di irrigazione di una zona all'interno di un programma.
-    Recupera i programmi attuali, aggiorna solo la zona indicata e salva tutto.
+  description: Modifica la durata di irrigazione di una zona in un programma.
   fields:
     device_puid:
       name: PUID dispositivo
-      description: Il PUID del dispositivo Pure Vision (es. "1000005059")
+      description: Il PUID del dispositivo Pure Vision
       required: true
       example: "1000005059"
       selector:
@@ -37,7 +106,7 @@ set_zone_duration:
               label: "Zona 4 (id=8)"
     duration_seconds:
       name: Durata (secondi)
-      description: Durata in secondi (0 = zona disabilitata, max 7200 = 2 ore)
+      description: Durata in secondi (0 = disabilitata, max 7200)
       required: true
       example: 900
       selector:
@@ -49,21 +118,16 @@ set_zone_duration:
 
 set_program_start_time:
   name: Imposta orario di partenza
-  description: >
-    Modifica l'orario di partenza di uno slot temporale di un programma.
-    Ogni programma ha fino a 6 slot di orario (indice 0-5).
-    Puoi anche attivare o disattivare lo slot.
+  description: Modifica l'orario di partenza di uno slot temporale di un programma.
   fields:
     device_puid:
       name: PUID dispositivo
-      description: Il PUID del dispositivo Pure Vision (es. "1000005059")
       required: true
       example: "1000005059"
       selector:
         text:
     program:
       name: Programma
-      description: Lettera del programma (A-H)
       required: true
       example: "A"
       selector:
@@ -71,7 +135,7 @@ set_program_start_time:
           options: ["A","B","C","D","E","F","G","H"]
     time_index:
       name: Indice slot orario
-      description: Quale slot modificare (0 = primo orario, 1 = secondo, ecc.)
+      description: Quale slot modificare (0 = primo, max 5)
       required: true
       example: 0
       selector:
@@ -80,15 +144,13 @@ set_program_start_time:
           max: 5
           step: 1
     time:
-      name: Orario
-      description: Orario di partenza nel formato HH:MM (es. "06:00")
+      name: Orario (HH:MM)
       required: true
       example: "06:00"
       selector:
         text:
     active:
       name: Attivo
-      description: Se true, lo slot è abilitato; se false, viene ignorato
       required: true
       example: true
       selector:
@@ -96,20 +158,16 @@ set_program_start_time:
 
 set_program_cycle:
   name: Imposta frequenza ciclo
-  description: >
-    Modifica ogni quante ore riparte il programma (tipo ciclo).
-    Ad esempio: 24 = ogni giorno, 48 = ogni 2 giorni, 6 = ogni 6 ore.
+  description: Modifica ogni quante ore riparte il programma.
   fields:
     device_puid:
       name: PUID dispositivo
-      description: Il PUID del dispositivo Pure Vision (es. "1000005059")
       required: true
       example: "1000005059"
       selector:
         text:
     program:
       name: Programma
-      description: Lettera del programma (A-H)
       required: true
       example: "A"
       selector:
@@ -117,7 +175,6 @@ set_program_cycle:
           options: ["A","B","C","D","E","F","G","H"]
     cycle_hours:
       name: Frequenza (ore)
-      description: Ogni quante ore riparte il programma
       required: true
       example: 24
       selector:
@@ -130,19 +187,17 @@ set_program_cycle:
 set_program_weekdays:
   name: Imposta giorni della settimana
   description: >
-    Modifica i giorni della settimana in cui il programma è attivo
-    (solo per programmi di tipo settimanale, non ciclo).
+    Modifica i giorni in cui il programma è attivo.
+    Indici: 1=Dom, 2=Lun, 3=Mar, 4=Mer, 5=Gio, 6=Ven, 7=Sab
   fields:
     device_puid:
       name: PUID dispositivo
-      description: Il PUID del dispositivo Pure Vision (es. "1000005059")
       required: true
       example: "1000005059"
       selector:
         text:
     program:
       name: Programma
-      description: Lettera del programma (A-H)
       required: true
       example: "A"
       selector:
@@ -150,9 +205,7 @@ set_program_weekdays:
           options: ["A","B","C","D","E","F","G","H"]
     weekdays:
       name: Giorni attivi
-      description: >
-        Lista degli indici dei giorni attivi.
-        1=Domenica, 2=Lunedì, 3=Martedì, 4=Mercoledì, 5=Giovedì, 6=Venerdì, 7=Sabato
+      description: Lista indici giorni (es. [2,4,6] = Lun/Mer/Ven)
       required: true
       example: [2, 4, 6]
       selector:
@@ -160,20 +213,17 @@ set_program_weekdays:
 
 set_programs:
   name: Imposta programmi completi
-  description: >
-    Invia un payload completo di programmi al dispositivo.
-    Usare quando si vuole aggiornare più programmi contemporaneamente.
+  description: Invia un payload completo di tutti i programmi al dispositivo.
   fields:
     device_puid:
       name: PUID dispositivo
-      description: Il PUID del dispositivo Pure Vision (es. "1000005059")
       required: true
       example: "1000005059"
       selector:
         text:
     programs:
       name: Programmi
-      description: Lista completa dei programmi (A-H) nel formato Rain Vision API
+      description: Lista completa dei programmi nel formato Rain Vision API
       required: true
       selector:
         object:
