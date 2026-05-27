@@ -44,13 +44,32 @@ async def async_setup_entry(
             entities.append(RainVisionActiveProgramsSensor(coordinator, cloud_id, device_id))
             # Meteo pause sensor
             entities.append(RainVisionMeteoPauseSensor(coordinator, cloud_id, device_id))
-            # Program detail sensors (one per program A-H)
+            # Program detail sensors + zone duration sensors
+            programs_data = coordinator.programs.get(device_id, [])
             for prog_info in device.get("fullprogramnames", []):
                 letter = prog_info.get("program_progressive", "")
                 label = prog_info.get("custom_name") or prog_info.get("default_name", letter)
+
+                # One summary sensor per program
                 entities.append(
                     RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
                 )
+
+                # One duration sensor per zone per program (from GetDeviceProgramList)
+                prog_data = next((p for p in programs_data if p.get("name") == letter), None)
+                if prog_data:
+                    for zone in prog_data.get("zones", []):
+                        entities.append(
+                            RainVisionProgramZoneDurationSensor(
+                                coordinator,
+                                cloud_id,
+                                device_id,
+                                letter,
+                                label,
+                                zone_id=zone.get("id"),
+                                zone_name=zone.get("name", f"Zone {zone.get('id')}"),
+                            )
+                        )
 
     async_add_entities(entities)
 
@@ -314,15 +333,20 @@ class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
             t["time"] for t in prog.get("times", []) if t.get("active")
         ]
 
-        # Zones with duration in minutes
-        zones = [
-            {
+        # All zones with duration (including inactive ones with duration=0)
+        zones = []
+        total_seconds = 0
+        for z in prog.get("zones", []):
+            duration_s = z.get("duration", 0)
+            duration_m = round(duration_s / 60, 1)
+            total_seconds += duration_s
+            zones.append({
                 "zona": z.get("name"),
-                "durata_minuti": round(z.get("duration", 0) / 60, 1),
-            }
-            for z in prog.get("zones", [])
-            if z.get("duration", 0) > 0
-        ]
+                "id": z.get("id"),
+                "durata_secondi": duration_s,
+                "durata_minuti": duration_m,
+                "attiva": duration_s > 0,
+            })
 
         # Active weekdays
         weekdays = [
@@ -339,9 +363,87 @@ class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
         return {
             "orari_attivi": active_times,
             "zone": zones,
+            "durata_totale_minuti": round(total_seconds / 60, 1),
             "giorni_settimana": weekdays if weekdays else None,
             "ciclo_ore": cycle_hours,
             "tipo": prog.get("type"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_device_info(self._device, self._cloud)
+
+
+class RainVisionProgramZoneDurationSensor(CoordinatorEntity, SensorEntity):
+    """Sensor showing the irrigation duration for a specific zone within a program."""
+
+    _attr_icon = "mdi:timer-outline"
+    _attr_native_unit_of_measurement = "min"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        coordinator: RainVisionCoordinator,
+        cloud_id: int,
+        device_id: int,
+        program_name: str,
+        program_label: str,
+        zone_id: int,
+        zone_name: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._cloud_id = cloud_id
+        self._device_id = device_id
+        self._program_name = program_name
+        self._program_label = program_label
+        self._zone_id = zone_id
+        self._zone_name = zone_name
+        self._attr_unique_id = f"device_{device_id}_program_{program_name}_zone_{zone_id}_duration"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def _zone_data(self) -> dict:
+        programs = self.coordinator.programs.get(self._device_id, [])
+        for p in programs:
+            if p.get("name") == self._program_name:
+                for z in p.get("zones", []):
+                    if z.get("id") == self._zone_id:
+                        return z
+        return {}
+
+    @property
+    def name(self) -> str:
+        device_name = self._device.get("name", "Device")
+        return f"{device_name} Prog {self._program_name} {self._zone_name} Durata"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return duration in minutes."""
+        zone = self._zone_data
+        if not zone:
+            return None
+        return round(zone.get("duration", 0) / 60, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        zone = self._zone_data
+        if not zone:
+            return {}
+        duration_s = zone.get("duration", 0)
+        return {
+            "durata_secondi": duration_s,
+            "durata_minuti": round(duration_s / 60, 1),
+            "attiva": duration_s > 0,
+            "zone_id": self._zone_id,
+            "programma": self._program_name,
+            "etichetta_programma": self._program_label,
         }
 
     @property
