@@ -1,7 +1,16 @@
-"""DataUpdateCoordinator for the Rainvision integration.
+"""
+Rain Vision Data Coordinator
+=============================
+Central DataUpdateCoordinator that polls the Rain Vision cloud API and
+caches the results so all HA entities share a single HTTP request cycle.
 
-Fetches all required API data in a single update cycle and exposes it to
-platform entities through coordinator.data.
+Poll sequence on each update:
+  1. GetPlaces            — builds self.clouds and self.devices dicts
+  2. nuvola/device        — real-time status (battery, status hex) per device
+  3. GetDeviceProgramList — full program/zone data per device
+
+All entities extend CoordinatorEntity and are updated automatically
+whenever _async_update_data() completes successfully.
 """
 from __future__ import annotations
 
@@ -11,69 +20,119 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import RainvisionApiClient, RainvisionAuthError, RainvisionConnectionError
-from .const import (
-    DOMAIN,
-    SCAN_INTERVAL_SECONDS,
-    COORDINATOR_DEVICE,
-    COORDINATOR_STAT,
-    COORDINATOR_PROGRAMS,
-    COORDINATOR_ZONES,
-)
+from .api import RainVisionApi, RainVisionApiError, RainVisionAuthError
+from .const import DOMAIN, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class RainvisionCoordinator(DataUpdateCoordinator):
-    """Aggregates data from all Rainvision API endpoints into a single dict.
+class RainVisionCoordinator(DataUpdateCoordinator):
+    """Coordinator that owns all Rain Vision data for a single config entry.
 
-    coordinator.data structure:
-        {
-            COORDINATOR_DEVICE:   response from GET nuvola/device
-            COORDINATOR_STAT:     response from GET nuvola/stat
-            COORDINATOR_PROGRAMS: response from GET GetProgramNames
-            COORDINATOR_ZONES:    response from GET GetZoneNames
-        }
+    Attributes:
+        api      (RainVisionApi):       Authenticated API client.
+        places   (list[dict]):          Raw place objects from GetPlaces.
+        clouds   (dict[int, dict]):     cloud_id → cloud data dict (Nuvola hubs).
+        devices  (dict[int, dict]):     device_id → device data dict (Pure Vision).
+                                        Each device has '_cloud_id' injected for
+                                        easy parent-cloud navigation.
+        programs (dict[int, list]):     device_id → program list from GetDeviceProgramList.
+        realtime (dict[int, dict]):     device_id → real-time status from nuvola/device.
     """
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        client: RainvisionApiClient,
-        cloud_puid: str,
-        device_puid: str,
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, api: RainVisionApi) -> None:
+        """Initialise the coordinator.
+
+        Args:
+            hass: Home Assistant instance.
+            api:  Authenticated RainVisionApi client.
+        """
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=SCAN_INTERVAL_SECONDS),
+            update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
-        self.client = client
-        # PUIDs are stored so platform modules can reference them for DeviceInfo
-        self.cloud_puid = cloud_puid
-        self.device_puid = device_puid
+        self.api      = api
+        self.places:   list[dict]       = []
+        self.clouds:   dict[int, dict]  = {}
+        self.devices:  dict[int, dict]  = {}
+        self.programs: dict[int, list]  = {}
+        self.realtime: dict[int, dict]  = {}
 
     async def _async_update_data(self) -> dict:
-        """Fetch fresh data from every required API endpoint.
+        """Fetch all Rain Vision data from the API.
+
+        Called by HA at every UPDATE_INTERVAL and immediately on first setup.
+
+        Steps:
+          1. GetPlaces — main structural data (clouds, devices, zones, programs).
+          2. nuvola/device — real-time status per device (battery, status hex).
+             Failures are non-fatal: a warning is logged and the previous
+             cached value is kept.
+          3. GetDeviceProgramList — detailed program/zone data per device.
+             Also non-fatal per device.
+
+        Returns:
+            Dict mirroring the coordinator attributes (used as self.data).
 
         Raises:
-            UpdateFailed: Wraps auth and connection errors so HA can surface
-                          them cleanly in the UI without crashing the coordinator.
+            UpdateFailed: If GetPlaces fails. HA marks the integration
+                          as unavailable until the next successful poll.
         """
+        # ── Step 1: GetPlaces ─────────────────────────────────────────────────
         try:
-            device = await self.client.get_device_status(self.device_puid)
-            stat = await self.client.get_nuvola_stat(self.cloud_puid)
-            programs = await self.client.get_program_names(self.device_puid)
-            zones = await self.client.get_zone_names(self.device_puid)
-        except RainvisionAuthError as err:
+            places = await self.api.get_places()
+        except RainVisionAuthError as err:
             raise UpdateFailed(f"Authentication failed: {err}") from err
-        except RainvisionConnectionError as err:
-            raise UpdateFailed(f"Connection error: {err}") from err
+        except RainVisionApiError as err:
+            raise UpdateFailed(f"API error on GetPlaces: {err}") from err
+
+        self.places  = places
+        self.clouds  = {}
+        self.devices = {}
+
+        for place in places:
+            for cloud in place.get("clouds", []):
+                cloud_id = cloud["id"]
+                self.clouds[cloud_id] = cloud
+                for device in cloud.get("devices", []):
+                    device_id = device["id"]
+                    device["_cloud_id"] = cloud_id   # inject parent reference
+                    self.devices[device_id] = device
+
+        # ── Step 2: nuvola/device (real-time status) ──────────────────────────
+        for device_id, device in self.devices.items():
+            puid = device.get("puid")
+            if not puid:
+                continue
+            try:
+                rt = await self.api.get_device_realtime(puid)
+                self.realtime[device_id] = rt
+            except (RainVisionApiError, RainVisionAuthError) as err:
+                _LOGGER.warning(
+                    "Could not fetch real-time status for device %s: %s", device_id, err
+                )
+                self.realtime.setdefault(device_id, {})
+
+        # ── Step 3: GetDeviceProgramList ──────────────────────────────────────
+        for device_id, device in self.devices.items():
+            puid = device.get("puid")
+            if not puid:
+                continue
+            try:
+                programs = await self.api.get_device_program_list(puid)
+                self.programs[device_id] = programs
+            except (RainVisionApiError, RainVisionAuthError) as err:
+                _LOGGER.warning(
+                    "Could not fetch programs for device %s: %s", device_id, err
+                )
+                self.programs.setdefault(device_id, [])
 
         return {
-            COORDINATOR_DEVICE: device,
-            COORDINATOR_STAT: stat,
-            COORDINATOR_PROGRAMS: programs,
-            COORDINATOR_ZONES: zones,
+            "places":   self.places,
+            "clouds":   self.clouds,
+            "devices":  self.devices,
+            "programs": self.programs,
+            "realtime": self.realtime,
         }

@@ -1,8 +1,17 @@
-"""Config flow for the Rainvision integration.
+"""
+Rain Vision Config Flow
+========================
+Handles the guided setup UI shown when the user adds the Rain Vision
+integration via Settings → Devices & Services → Add Integration.
 
-Presents a single form that collects credentials and device PUIDs,
-authenticates against the Rainvision cloud, and stores the resulting
-Bearer token in the config entry data.
+The flow:
+  1. Show a form asking for email and password.
+  2. Attempt login via RainVisionApi.authenticate().
+  3. On success, create the config entry storing email, password and token.
+  4. On failure, show an inline error and let the user try again.
+
+A unique_id based on the account email prevents duplicate entries for
+the same Rain Vision account.
 """
 from __future__ import annotations
 
@@ -12,75 +21,74 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import RainvisionApiClient, RainvisionAuthError, RainvisionConnectionError
-from .const import (
-    DOMAIN,
-    CONF_EMAIL,
-    CONF_PASSWORD,
-    CONF_CLOUD_PUID,
-    CONF_DEVICE_PUID,
-    CONF_TOKEN,
-)
+from .api import RainVisionApi, RainVisionAuthError, RainVisionApiError
+from .const import DOMAIN, CONF_TOKEN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Schema for the initial user setup step
+# Schema for the user-facing login form
 STEP_USER_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_EMAIL): str,
+        vol.Required(CONF_EMAIL):    str,
         vol.Required(CONF_PASSWORD): str,
-        # Suggested values match the PUIDs found in the HAR capture
-        vol.Required(CONF_CLOUD_PUID, description={"suggested_value": "2000001121"}): str,
-        vol.Required(CONF_DEVICE_PUID, description={"suggested_value": "1000005059"}): str,
     }
 )
 
 
-class RainvisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for the Rainvision integration."""
+class RainVisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for the Rain Vision integration.
+
+    Presents a single-step form that collects email and password,
+    validates them against the Rain Vision API, and creates the
+    config entry on success.
+    """
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Handle the initial step shown to the user.
+        """Handle the initial (and only) setup step.
 
-        Validates credentials by attempting a real login; stores the token
-        on success so the coordinator can use it without re-authenticating.
+        Args:
+            user_input: Dict with 'email' and 'password' keys when the
+                        user submits the form, or None on first display.
+
+        Returns:
+            A FlowResult showing the form or creating the config entry.
         """
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            email    = user_input[CONF_EMAIL]
+            password = user_input[CONF_PASSWORD]
+
             session = async_get_clientsession(self.hass)
-            client = RainvisionApiClient(session)
+            api     = RainVisionApi(session)
 
             try:
-                token = await client.authenticate(
-                    user_input[CONF_EMAIL], user_input[CONF_PASSWORD]
-                )
-            except RainvisionAuthError:
+                token = await api.authenticate(email, password)
+            except RainVisionAuthError:
                 errors["base"] = "invalid_auth"
-            except RainvisionConnectionError:
+            except RainVisionApiError:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001
-                _LOGGER.exception("Unexpected error during login")
+            except Exception:
+                _LOGGER.exception("Unexpected error during Rain Vision login")
                 errors["base"] = "unknown"
             else:
-                # Use cloud_puid as the unique identifier to prevent duplicates
-                await self.async_set_unique_id(user_input[CONF_CLOUD_PUID])
+                # Prevent duplicate entries for the same account
+                await self.async_set_unique_id(email.lower())
                 self._abort_if_unique_id_configured()
 
                 return self.async_create_entry(
-                    title=f"Rainvision ({user_input[CONF_CLOUD_PUID]})",
+                    title=f"Rain Vision ({email})",
                     data={
-                        CONF_EMAIL: user_input[CONF_EMAIL],
-                        CONF_PASSWORD: user_input[CONF_PASSWORD],
-                        CONF_CLOUD_PUID: user_input[CONF_CLOUD_PUID],
-                        CONF_DEVICE_PUID: user_input[CONF_DEVICE_PUID],
-                        CONF_TOKEN: token,
+                        CONF_EMAIL:    email,
+                        CONF_PASSWORD: password,
+                        CONF_TOKEN:    token,
                     },
                 )
 
@@ -89,9 +97,3 @@ class RainvisionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_USER_SCHEMA,
             errors=errors,
         )
-
-    async def async_step_reauth(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.FlowResult:
-        """Handle re-authentication when the stored token has expired."""
-        return await self.async_step_user(user_input)

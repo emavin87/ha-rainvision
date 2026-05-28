@@ -1,31 +1,36 @@
-"""Constants for the Rainvision integration."""
+"""
+Constants for the Rain Vision integration.
 
+Centralises all fixed values used across the integration:
+domain name, manufacturer info, config entry keys, polling
+interval, service names and supported program letters.
+"""
+
+# Integration domain — must match the folder name and manifest domain
 DOMAIN = "rainvision"
 
-BASE_URL = "https://www.rainvision.it/api/v5"
+# Device registry metadata
+MANUFACTURER = "Rain S.p.A."
+MODEL_CLOUD  = "Nuvola Vision"
+MODEL_DEVICE = "Pure Vision"
 
-# Config entry keys
-CONF_EMAIL = "email"
-CONF_PASSWORD = "password"
-CONF_CLOUD_PUID = "cloud_puid"
-CONF_DEVICE_PUID = "device_puid"
+# Config entry data keys
 CONF_TOKEN = "token"
 
-# How often to poll the cloud API (seconds)
-SCAN_INTERVAL_SECONDS = 60
+# How often the coordinator polls the Rain Vision API (seconds)
+UPDATE_INTERVAL = 60
 
-# Entity attribute names
-ATTR_BATTERY = "battery"
-ATTR_STATUS = "status"
-ATTR_PROGRAMS = "programs"
-ATTR_ZONES = "zones"
-ATTR_METEO_PAUSE = "meteo_pause"
-ATTR_FIRMWARE = "firmware_id"
-ATTR_LAST_UPDATE = "last_update"
-ATTR_ACTIVE_PROGRAMS = "active_programs"
+# Default duration used when manually starting a zone without specifying one
+DEFAULT_MANUAL_DURATION = 10  # minutes
 
-# Keys used inside the coordinator data dict
-COORDINATOR_DEVICE = "device"
-COORDINATOR_STAT = "stat"
-COORDINATOR_PROGRAMS = "programs"
-COORDINATOR_ZONES = "zones"
+# Valid irrigation program letters (A through H)
+PROGRAMS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+
+# ── Service names ─────────────────────────────────────────────────────────────
+SVC_MANUAL_START      = "manual_start"
+SVC_MANUAL_STOP       = "manual_stop"
+SVC_SET_ZONE_DURATION = "set_zone_duration"
+SVC_SET_START_TIME    = "set_program_start_time"
+SVC_SET_CYCLE         = "set_program_cycle"
+SVC_SET_WEEKDAYS      = "set_program_weekdays"
+SVC_SET_PROGRAMS      = "set_programs"

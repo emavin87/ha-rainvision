@@ -1,0 +1,241 @@
+manual_start:
+  name: Start manual irrigation
+  description: >
+    Manually start irrigation on a specific zone.
+    Find cloud_id and device_id in the attributes of the
+    "Rain Vision — Select Nuvola Hub" and "Rain Vision — Select Device" entities.
+  fields:
+    cloud_id:
+      name: Cloud ID (Nuvola hub)
+      description: ID of the Nuvola Vision hub (visible in Select Hub attributes)
+      required: true
+      example: 1099
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID (Pure Vision)
+      description: ID of the Pure Vision device (visible in Select Device attributes)
+      required: true
+      example: 5644
+      selector:
+        number:
+          min: 1
+          mode: box
+    zone:
+      name: Zone number
+      description: Zone to irrigate (1–8)
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 8
+          step: 1
+    duration_minutes:
+      name: Duration (minutes)
+      description: How long to irrigate (default 10, max 120)
+      required: false
+      example: 10
+      selector:
+        number:
+          min: 1
+          max: 120
+          step: 1
+          unit_of_measurement: "min"
+
+manual_stop:
+  name: Stop manual irrigation
+  description: >
+    Stop all manual irrigation currently running on a device.
+  fields:
+    cloud_id:
+      name: Cloud ID (Nuvola hub)
+      description: ID of the Nuvola Vision hub
+      required: true
+      example: 1099
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID (Pure Vision)
+      description: ID of the Pure Vision device
+      required: true
+      example: 5644
+      selector:
+        number:
+          min: 1
+          mode: box
+
+set_zone_duration:
+  name: Set zone duration
+  description: >
+    Update the irrigation duration for one zone within a program.
+    Performs a read-modify-write cycle automatically.
+    Find the PUID in the "Rain Vision — Select Device PUID" entity attributes.
+  fields:
+    device_puid:
+      name: Device PUID
+      description: PUID of the Pure Vision device (e.g. "1000005059")
+      required: true
+      example: "1000005059"
+      selector:
+        text:
+    program:
+      name: Program
+      description: Program letter to modify (A–H)
+      required: true
+      example: "A"
+      selector:
+        select:
+          options: ["A","B","C","D","E","F","G","H"]
+    zone_id:
+      name: Zone ID
+      description: Zone ID as used by the API (1=Zone1, 2=Zone2, 4=Zone3, 8=Zone4)
+      required: true
+      example: 1
+      selector:
+        select:
+          options:
+            - value: 1
+              label: "Zone 1 (id=1)"
+            - value: 2
+              label: "Zone 2 (id=2)"
+            - value: 4
+              label: "Zone 3 (id=4)"
+            - value: 8
+              label: "Zone 4 (id=8)"
+    duration_seconds:
+      name: Duration (seconds)
+      description: Duration in seconds (0 = disable zone in this program, max 7200 = 2 h)
+      required: true
+      example: 900
+      selector:
+        number:
+          min: 0
+          max: 7200
+          step: 60
+          unit_of_measurement: "s"
+
+set_program_start_time:
+  name: Set program start time
+  description: >
+    Update a start-time slot for a program. Each program has up to 6
+    time slots (time_index 0–5). You can enable or disable each slot independently.
+  fields:
+    device_puid:
+      name: Device PUID
+      required: true
+      example: "1000005059"
+      selector:
+        text:
+    program:
+      name: Program
+      required: true
+      example: "A"
+      selector:
+        select:
+          options: ["A","B","C","D","E","F","G","H"]
+    time_index:
+      name: Time slot index
+      description: Which slot to update (0 = first slot, max 5)
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+    time:
+      name: Start time (HH:MM)
+      description: Start time in 24-hour format
+      required: true
+      example: "06:00"
+      selector:
+        text:
+    active:
+      name: Enabled
+      description: true = slot is active, false = slot is disabled
+      required: true
+      example: true
+      selector:
+        boolean:
+
+set_program_cycle:
+  name: Set program cycle frequency
+  description: >
+    Update how often a program repeats. Examples:
+    6 = every 6 hours, 24 = once a day, 48 = every 2 days.
+  fields:
+    device_puid:
+      name: Device PUID
+      required: true
+      example: "1000005059"
+      selector:
+        text:
+    program:
+      name: Program
+      required: true
+      example: "A"
+      selector:
+        select:
+          options: ["A","B","C","D","E","F","G","H"]
+    cycle_hours:
+      name: Frequency (hours)
+      description: Repeat interval in hours (1–168)
+      required: true
+      example: 24
+      selector:
+        number:
+          min: 1
+          max: 168
+          step: 1
+          unit_of_measurement: "h"
+
+set_program_weekdays:
+  name: Set program weekdays
+  description: >
+    Update which days of the week a program runs.
+    Day indexes: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat.
+  fields:
+    device_puid:
+      name: Device PUID
+      required: true
+      example: "1000005059"
+      selector:
+        text:
+    program:
+      name: Program
+      required: true
+      example: "A"
+      selector:
+        select:
+          options: ["A","B","C","D","E","F","G","H"]
+    weekdays:
+      name: Active days
+      description: List of day indexes to enable (e.g. [2,4,6] = Mon/Wed/Fri)
+      required: true
+      example: [2, 4, 6]
+      selector:
+        object:
+
+set_programs:
+  name: Set full programs payload
+  description: >
+    Send a complete programs list to the device.
+    Use this when updating multiple programs in a single call.
+  fields:
+    device_puid:
+      name: Device PUID
+      required: true
+      example: "1000005059"
+      selector:
+        text:
+    programs:
+      name: Programs
+      description: Full list of program objects in Rain Vision API format
+      required: true
+      selector:
+        object:
