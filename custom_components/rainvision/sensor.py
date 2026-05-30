@@ -12,7 +12,12 @@ Sensor types:
   RainVisionDeviceOnlineSensor  -- online/offline status of a device
   RainVisionActiveProgramsSensor -- which programs (A-H) are enabled
   RainVisionMeteoPauseSensor    -- current meteo-pause state
-  RainVisionProgramDetailSensor -- one sensor per program; state = next active start time.
+  RainVisionProgramDetailSensor        -- one sensor per program; all data as flat attributes
+  RainVisionDeviceLastUpdatedSensor     -- last time device record was updated (updated_at)
+  RainVisionCloudLastScannedSensor      -- last BLE scan Nuvola -> Pure Vision (last_scanned_at)
+  RainVisionCloudLastConnectionSensor   -- last Nuvola cloud connection (last_connection)
+  RainVisionCloudLastPingSensor         -- last Nuvola heartbeat ping (last_ping_at)
+  RainVisionRealtimeTimestampSensor     -- timestamp of last nuvola/device response
                                    All program data exposed as flat extra_state_attributes:
                                    times_N_time/active/hidden, zones_N_id/name/duration_*,
                                    weekdays_N_name/index/is_checked, type/cycle/active/even,
@@ -62,6 +67,9 @@ async def async_setup_entry(
 
     for cloud_id, cloud in coordinator.clouds.items():
         entities.append(RainVisionCloudBatterySensor(coordinator, cloud_id))
+        entities.append(RainVisionCloudLastScannedSensor(coordinator, cloud_id))
+        entities.append(RainVisionCloudLastConnectionSensor(coordinator, cloud_id))
+        entities.append(RainVisionCloudLastPingSensor(coordinator, cloud_id))
 
         for device in cloud.get("devices", []):
             device_id = device["id"]
@@ -69,6 +77,8 @@ async def async_setup_entry(
             entities.append(RainVisionDeviceOnlineSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionActiveProgramsSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionMeteoPauseSensor(coordinator, cloud_id, device_id))
+            entities.append(RainVisionDeviceLastUpdatedSensor(coordinator, cloud_id, device_id))
+            entities.append(RainVisionRealtimeTimestampSensor(coordinator, cloud_id, device_id))
 
             # One sensor per program -- all data exposed as flat attributes
             for prog_info in device.get("fullprogramnames", []):
@@ -450,3 +460,274 @@ class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
     def device_info(self) -> DeviceInfo:
         return _device_info(self._device, self._cloud)
 
+
+
+# ── Timestamp sensors ─────────────────────────────────────────────────────────
+
+class RainVisionDeviceLastUpdatedSensor(CoordinatorEntity, SensorEntity):
+    """Last time the device record was updated in the Rain Vision cloud database.
+
+    Source: devices[0].updated_at from GetPlaces.
+    This reflects the last time any property of the device changed in the
+    backend, not necessarily the last time it communicated.
+
+    State: ISO 8601 timestamp string.
+    """
+
+    _attr_icon        = "mdi:clock-check-outline"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int, device_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._device_id      = device_id
+        self._attr_unique_id = f"device_{device_id}_last_updated"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def name(self) -> str:
+        return f"{self._device.get('name', 'Device')} Last Updated"
+
+    @property
+    def native_value(self):
+        """Return updated_at as a datetime object for HA timestamp device class."""
+        from datetime import datetime, timezone
+        val = self._device.get("updated_at")
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "description": "Last time the device record was updated in the Rain Vision cloud database",
+            "source_field": "devices[0].updated_at",
+            "source_api":   "GetPlaces",
+            "raw_value":    self._device.get("updated_at"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_info(self._device, self._cloud)
+
+
+class RainVisionCloudLastScannedSensor(CoordinatorEntity, SensorEntity):
+    """Last time the Nuvola hub scanned the Pure Vision device via BLE.
+
+    Source: clouds[0].last_scanned_at from GetPlaces.
+    This is the most reliable indicator of when fresh device data was
+    last retrieved from the Pure Vision controller.
+
+    State: ISO 8601 timestamp string.
+    """
+
+    _attr_icon         = "mdi:bluetooth-connect"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._attr_unique_id = f"cloud_{cloud_id}_last_scanned"
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def name(self) -> str:
+        return f"{self._cloud.get('name', 'Nuvola')} Last Scanned"
+
+    @property
+    def native_value(self):
+        """Return last_scanned_at as a datetime object."""
+        from datetime import datetime, timezone
+        val = self._cloud.get("last_scanned_at")
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "description": "Last time the Nuvola hub scanned the Pure Vision device via BLE",
+            "source_field": "clouds[0].last_scanned_at",
+            "source_api":   "GetPlaces",
+            "raw_value":    self._cloud.get("last_scanned_at"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _cloud_info(self._cloud)
+
+
+class RainVisionCloudLastConnectionSensor(CoordinatorEntity, SensorEntity):
+    """Last time the Nuvola hub connected to the Rain Vision cloud.
+
+    Source: clouds[0].last_connection from GetPlaces.
+    Useful to detect if the hub has gone offline or lost internet connectivity.
+
+    State: ISO 8601 timestamp string.
+    """
+
+    _attr_icon         = "mdi:cloud-check-outline"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._attr_unique_id = f"cloud_{cloud_id}_last_connection"
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def name(self) -> str:
+        return f"{self._cloud.get('name', 'Nuvola')} Last Connection"
+
+    @property
+    def native_value(self):
+        from datetime import datetime
+        val = self._cloud.get("last_connection")
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "description": "Last time the Nuvola hub connected to the Rain Vision cloud",
+            "source_field": "clouds[0].last_connection",
+            "source_api":   "GetPlaces",
+            "raw_value":    self._cloud.get("last_connection"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _cloud_info(self._cloud)
+
+
+class RainVisionCloudLastPingSensor(CoordinatorEntity, SensorEntity):
+    """Last time the Nuvola hub sent a ping to the Rain Vision cloud.
+
+    Source: clouds[0].last_ping_at from GetPlaces.
+    The ping is a lightweight heartbeat signal. If this timestamp is stale,
+    the hub may have lost connectivity even if last_connection appears recent.
+
+    State: ISO 8601 timestamp string.
+    """
+
+    _attr_icon         = "mdi:heart-pulse"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._attr_unique_id = f"cloud_{cloud_id}_last_ping"
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def name(self) -> str:
+        return f"{self._cloud.get('name', 'Nuvola')} Last Ping"
+
+    @property
+    def native_value(self):
+        from datetime import datetime
+        val = self._cloud.get("last_ping_at")
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "description": "Last time the Nuvola hub sent a ping to the Rain Vision cloud",
+            "source_field": "clouds[0].last_ping_at",
+            "source_api":   "GetPlaces",
+            "raw_value":    self._cloud.get("last_ping_at"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _cloud_info(self._cloud)
+
+
+class RainVisionRealtimeTimestampSensor(CoordinatorEntity, SensorEntity):
+    """Timestamp of the last real-time response from the nuvola/device endpoint.
+
+    Source: data.timestamp from nuvola/device API.
+    This is the freshest available timestamp — it reflects when the Nuvola
+    hub last provided a live status snapshot of the Pure Vision device.
+
+    State: ISO 8601 timestamp string.
+    """
+
+    _attr_icon         = "mdi:antenna"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int, device_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._device_id      = device_id
+        self._attr_unique_id = f"device_{device_id}_realtime_timestamp"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def name(self) -> str:
+        return f"{self._device.get('name', 'Device')} Realtime Timestamp"
+
+    @property
+    def native_value(self):
+        from datetime import datetime
+        rt  = self.coordinator.realtime.get(self._device_id, {})
+        val = rt.get("timestamp")
+        if not val:
+            return None
+        try:
+            return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        rt = self.coordinator.realtime.get(self._device_id, {})
+        return {
+            "description": "Timestamp of the last real-time response from the nuvola/device endpoint",
+            "source_field": "data.timestamp",
+            "source_api":   "nuvola/device",
+            "raw_value":    rt.get("timestamp"),
+            "next_update":  rt.get("next_update"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_info(self._device, self._cloud)
