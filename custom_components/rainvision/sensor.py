@@ -425,7 +425,13 @@ class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
         # Program metadata
         attrs["type"]   = prog.get("type")
         attrs["cycle"]  = prog.get("cycle")
-        attrs["active"] = prog.get("active")
+        # "active" field may be absent from GetDeviceProgramList response.
+        # Fall back to device["active_programs"] (e.g. "[A,B,C,D]") from GetPlaces.
+        # active field may be null/absent in GetDeviceProgramList.
+        # Always derive it from active_programs in GetPlaces which is reliable.
+        active_raw = self._device.get("active_programs", "")
+        active_letters = set(active_raw.strip("[]").split(","))
+        attrs["active"] = self._program_name in active_letters
         attrs["even"]   = prog.get("even")
 
         # Start-time slots: times_N_time, times_N_active, times_N_hidden

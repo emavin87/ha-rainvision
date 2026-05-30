@@ -3,17 +3,17 @@ cards:
 
   # ── Impostazioni ─────────────────────────────────────────────────────────────
   - type: entities
-    title: "Programma A — Prato"
+    title: "Programma B — Piante"
     entities:
 
-      - entity: sensor.pure_vision_ev_programma_a_prato
+      - entity: sensor.pure_vision_ev_programma_b_piante
         name: "Prossimo avvio"
         icon: mdi:clock-start
 
       - type: section
         label: "⚙️ Impostazioni"
 
-      - entity: sensor.pure_vision_ev_programma_a_prato
+      - entity: sensor.pure_vision_ev_programma_b_piante
         name: "Tipo"
         type: attribute
         attribute: type
@@ -22,24 +22,24 @@ cards:
       - type: conditional
         conditions:
           - condition: state
-            entity: sensor.pure_vision_ev_programma_a_prato
+            entity: sensor.pure_vision_ev_programma_b_piante
             attribute: type
             state: "cycle"
         row:
-          entity: sensor.pure_vision_ev_programma_a_prato
+          entity: sensor.pure_vision_ev_programma_b_piante
           name: "Ciclo"
           type: attribute
           attribute: cycle
           icon: mdi:refresh
           suffix: " h"
 
-      - entity: sensor.pure_vision_ev_programma_a_prato
+      - entity: sensor.pure_vision_ev_programma_b_piante
         name: "Attivo"
         type: attribute
         attribute: active
         icon: mdi:toggle-switch
 
-      - entity: sensor.pure_vision_ev_programma_a_prato
+      - entity: sensor.pure_vision_ev_programma_b_piante
         name: "Durata totale"
         type: attribute
         attribute: total_duration_minutes
@@ -57,7 +57,7 @@ cards:
     square: false
     cards:
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 1"
         show_state: false
         show_label: true
@@ -88,7 +88,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 2"
         show_state: false
         show_label: true
@@ -119,7 +119,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 3"
         show_state: false
         show_label: true
@@ -150,7 +150,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 4"
         show_state: false
         show_label: true
@@ -181,7 +181,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 5"
         show_state: false
         show_label: true
@@ -212,7 +212,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Orario 6"
         show_state: false
         show_label: true
@@ -253,7 +253,7 @@ cards:
     square: false
     cards:
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Zona 1"
         show_state: false
         show_label: true
@@ -284,7 +284,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Zona 2"
         show_state: false
         show_label: true
@@ -315,7 +315,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Zona 3"
         show_state: false
         show_label: true
@@ -346,7 +346,7 @@ cards:
             - width: 20px
 
       - type: custom:button-card
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         name: "Zona 4"
         show_state: false
         show_label: true
@@ -380,7 +380,7 @@ cards:
   - type: conditional
     conditions:
       - condition: state
-        entity: sensor.pure_vision_ev_programma_a_prato
+        entity: sensor.pure_vision_ev_programma_b_piante
         attribute: type
         state_not: "cycle"
     card:
@@ -396,7 +396,7 @@ cards:
           square: false
           cards:
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Domenica"
               show_state: false
               show_label: true
@@ -424,7 +424,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Lunedì"
               show_state: false
               show_label: true
@@ -452,7 +452,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Martedì"
               show_state: false
               show_label: true
@@ -480,7 +480,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Mercoledì"
               show_state: false
               show_label: true
@@ -508,7 +508,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Giovedì"
               show_state: false
               show_label: true
@@ -536,7 +536,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Venerdì"
               show_state: false
               show_label: true
@@ -564,7 +564,7 @@ cards:
                   - width: 20px
 
             - type: custom:button-card
-              entity: sensor.pure_vision_ev_programma_a_prato
+              entity: sensor.pure_vision_ev_programma_b_piante
               name: "Sabato"
               show_state: false
               show_label: true
