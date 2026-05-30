@@ -182,9 +182,10 @@ class RainVisionDeviceBatterySensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> int | None:
-        # Prefer the battery value from the real-time response (more up-to-date)
+        # Prefer real-time battery from data.status.battery (nuvola/device response)
+        # Falls back to device.battery from GetPlaces
         rt = self.coordinator.realtime.get(self._device_id, {})
-        rt_battery = rt.get("data", {}).get("status", {}).get("battery")
+        rt_battery = (rt.get("data") or {}).get("status", {}).get("battery")
         return rt_battery if rt_battery is not None else self._device.get("battery")
 
     @property
@@ -226,9 +227,12 @@ class RainVisionDeviceOnlineSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         rt = self.coordinator.realtime.get(self._device_id, {})
+        status = (rt.get("data") or {}).get("status", {})
         return {
-            "last_update": rt.get("timestamp"),
-            "next_update": rt.get("next_update"),
+            "last_update":  rt.get("timestamp"),
+            "next_update":  rt.get("next_update"),
+            "status_hex":   status.get("status"),
+            "pause_hex":    status.get("pause"),
         }
 
     @property
@@ -715,6 +719,7 @@ class RainVisionRealtimeTimestampSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         from datetime import datetime
         rt  = self.coordinator.realtime.get(self._device_id, {})
+        # timestamp is at root level: {"timestamp": "2026-05-30T19:00:51.185141Z", ...}
         val = rt.get("timestamp")
         if not val:
             return None
@@ -726,12 +731,16 @@ class RainVisionRealtimeTimestampSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         rt = self.coordinator.realtime.get(self._device_id, {})
+        status = (rt.get("data") or {}).get("status", {})
         return {
-            "description": "Timestamp of the last real-time response from the nuvola/device endpoint",
-            "source_field": "data.timestamp",
+            "description":  "Timestamp of the last real-time response from nuvola/device",
+            "source_field": "timestamp",
             "source_api":   "nuvola/device",
             "raw_value":    rt.get("timestamp"),
             "next_update":  rt.get("next_update"),
+            "battery":      status.get("battery"),
+            "status_hex":   status.get("status"),
+            "pause_hex":    status.get("pause"),
         }
 
     @property

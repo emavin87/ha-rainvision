@@ -243,10 +243,27 @@ class RainVisionApi:
             RainVisionApiError:  On network or server errors.
         """
         payload = {
-            "device_puid":       device_puid,
+            "device_puid":        device_puid,
             "utcOffsetInMinutes": utc_offset_minutes,
-            "forceRefresh":      force_refresh,
+            "forceRefresh":       force_refresh,
         }
+        # Response structure (documented from live capture):
+        # {
+        #   "success": true,
+        #   "timestamp": "2026-05-30T19:00:51.185141Z",  <- root-level last update
+        #   "next_update": null,
+        #   "data": {
+        #     "success": true,
+        #     "status": {
+        #       "battery": 83,
+        #       "status":  "000100...",   <- 42-char hex: zone/program state
+        #       "pause":   "3804...",     <- pause schedule hex
+        #       "settings": "...",
+        #       "timestamp": { "MSG_ID": 2, "RESULT": 0, "ARGS": [] }
+        #     }
+        #   },
+        #   "device": { ...full device object with cloud nested inside... }
+        # }
         try:
             async with self._session.post(
                 f"{BASE_URL}/nuvola/device",

@@ -108,6 +108,22 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                 continue
             try:
                 rt = await self.api.get_device_realtime(puid)
+                # Response structure:
+                # {
+                #   timestamp: "2026-05-30T19:00:51.185141Z",  <- last update
+                #   next_update: null,
+                #   data: {
+                #     status: {
+                #       battery: 83,
+                #       status:  "000100...",  <- zone state hex
+                #       pause:   "3804...",    <- pause hex
+                #       settings: "...",
+                #       timestamp: { MSG_ID, RESULT, ARGS }
+                #     }
+                #   },
+                #   device: { ...full device object... },
+                #   device.cloud: { ...Nuvola object with meteo... }
+                # }
                 self.realtime[device_id] = rt
             except (RainVisionApiError, RainVisionAuthError) as err:
                 _LOGGER.warning(
