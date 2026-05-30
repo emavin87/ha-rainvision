@@ -7,15 +7,14 @@ Sensors are created dynamically from the hardware and programs
 discovered during the first coordinator refresh.
 
 Sensor types:
-  RainVisionCloudBatterySensor        — battery % of a Nuvola Vision hub
-  RainVisionDeviceBatterySensor       — battery % of a Pure Vision controller
-  RainVisionDeviceOnlineSensor        — online/offline status of a device
-  RainVisionActiveProgramsSensor      — which programs (A–H) are enabled
-  RainVisionMeteoPauseSensor          — current meteo-pause state
-  RainVisionProgramDetailSensor       — next start time + full schedule summary
-  RainVisionProgramZoneDurationSensor — duration of one zone in one program
-  RainVisionProgramTimeSlotSensor     — one start-time slot (0–5) of a program
-  RainVisionProgramWeekdaySensor      — one weekday entry (name, index, isChecked) of a program
+  RainVisionCloudBatterySensor  -- battery % of a Nuvola Vision hub
+  RainVisionDeviceBatterySensor -- battery % of a Pure Vision controller
+  RainVisionDeviceOnlineSensor  -- online/offline status of a device
+  RainVisionActiveProgramsSensor -- which programs (A-H) are enabled
+  RainVisionMeteoPauseSensor    -- current meteo-pause state
+  RainVisionProgramDetailSensor -- one sensor per program, ALL data as flat attributes:
+                                   times_N_time/active/hidden, zones_N_id/name/duration_*,
+                                   weekdays_N_name/index/is_checked, type/cycle/active
 """
 from __future__ import annotations
 
@@ -69,47 +68,13 @@ async def async_setup_entry(
             entities.append(RainVisionActiveProgramsSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionMeteoPauseSensor(coordinator, cloud_id, device_id))
 
-            # One summary sensor + one duration sensor per zone for each program
-            programs_data = coordinator.programs.get(device_id, [])
+            # One sensor per program -- all data exposed as flat attributes
             for prog_info in device.get("fullprogramnames", []):
                 letter = prog_info.get("program_progressive", "")
                 label  = prog_info.get("custom_name") or prog_info.get("default_name", letter)
-
                 entities.append(
                     RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
                 )
-
-                prog_data = next((p for p in programs_data if p.get("name") == letter), None)
-                if prog_data:
-                    # One duration sensor per zone in this program
-                    for zone in prog_data.get("zones", []):
-                        entities.append(
-                            RainVisionProgramZoneDurationSensor(
-                                coordinator, cloud_id, device_id,
-                                letter, label,
-                                zone_id=zone.get("id"),
-                                zone_name=zone.get("name", f"Zone {zone.get('id')}"),
-                            )
-                        )
-                    # One time-slot sensor per slot in this program (up to 6)
-                    for time_index, _ in enumerate(prog_data.get("times", [])):
-                        entities.append(
-                            RainVisionProgramTimeSlotSensor(
-                                coordinator, cloud_id, device_id,
-                                letter, label,
-                                time_index=time_index,
-                            )
-                        )
-                    # One weekday sensor per weekday entry (only if weekdays list is present)
-                    for day in prog_data.get("weekdays", []):
-                        entities.append(
-                            RainVisionProgramWeekdaySensor(
-                                coordinator, cloud_id, device_id,
-                                letter, label,
-                                day_index=day.get("index"),
-                                day_name=day.get("name", f"Day {day.get('index')}"),
-                            )
-                        )
 
     async_add_entities(entities)
 
@@ -427,323 +392,59 @@ class RainVisionProgramDetailSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """Return all program data as flat key-value attributes.
+
+        Attribute naming conventions:
+          times_N_time, times_N_active, times_N_hidden     -- start-time slots (N=0..5)
+          zones_N_id, zones_N_name, zones_N_progressive,
+          zones_N_duration_seconds, zones_N_duration_minutes,
+          zones_N_active                                    -- zone durations (N=0..3)
+          weekdays_N_name, weekdays_N_index,
+          weekdays_N_is_checked                             -- weekday schedule (N=0..6)
+          type, cycle, active, even                        -- program metadata
+          total_duration_minutes                           -- sum of all zone durations
+        """
         prog = self._program_data
         if not prog:
             return {}
 
-        active_times   = [t["time"] for t in prog.get("times", []) if t.get("active")]
-        total_seconds  = 0
-        zones          = []
-        for z in prog.get("zones", []):
+        attrs: dict[str, Any] = {}
+
+        # Program metadata
+        attrs["type"]   = prog.get("type")
+        attrs["cycle"]  = prog.get("cycle")
+        attrs["active"] = prog.get("active")
+        attrs["even"]   = prog.get("even")
+
+        # Start-time slots: times_N_time, times_N_active, times_N_hidden
+        for i, t in enumerate(prog.get("times", [])):
+            attrs[f"times_{i}_time"]   = t.get("time")
+            attrs[f"times_{i}_active"] = t.get("active", False)
+            attrs[f"times_{i}_hidden"] = t.get("hidden", False)
+
+        # Zones: zones_N_id, zones_N_name, zones_N_duration_seconds/minutes, zones_N_active
+        total_seconds = 0
+        for i, z in enumerate(prog.get("zones", [])):
             dur_s = z.get("duration", 0)
             total_seconds += dur_s
-            zones.append({
-                "name":             z.get("name"),
-                "id":               z.get("id"),
-                "duration_seconds": dur_s,
-                "duration_minutes": round(dur_s / 60, 1),
-                "active":           dur_s > 0,
-            })
+            attrs[f"zones_{i}_id"]               = z.get("id")
+            attrs[f"zones_{i}_progressive"]       = z.get("progressive")
+            attrs[f"zones_{i}_name"]              = z.get("name")
+            attrs[f"zones_{i}_duration_seconds"]  = dur_s
+            attrs[f"zones_{i}_duration_minutes"]  = round(dur_s / 60, 1)
+            attrs[f"zones_{i}_active"]            = dur_s > 0
 
-        weekdays = [d["name"] for d in prog.get("weekdays", []) if d.get("isChecked")]
-        try:
-            cycle_hours: int | None = int(prog.get("cycle", 0))
-        except (TypeError, ValueError):
-            cycle_hours = None
+        attrs["total_duration_minutes"] = round(total_seconds / 60, 1)
 
-        return {
-            "active_times":           active_times,
-            "zones":                  zones,
-            "total_duration_minutes": round(total_seconds / 60, 1),
-            "weekdays":               weekdays or None,
-            "cycle_hours":            cycle_hours,
-            "type":                   prog.get("type"),
-        }
+        # Weekdays (only populated for weekday-based programs)
+        for i, d in enumerate(prog.get("weekdays", [])):
+            attrs[f"weekdays_{i}_name"]       = d.get("name")
+            attrs[f"weekdays_{i}_index"]      = d.get("index")
+            attrs[f"weekdays_{i}_is_checked"] = d.get("isChecked", False)
+
+        return attrs
 
     @property
     def device_info(self) -> DeviceInfo:
         return _device_info(self._device, self._cloud)
 
-
-class RainVisionProgramZoneDurationSensor(CoordinatorEntity, SensorEntity):
-    """Duration sensor for one zone within one irrigation program.
-
-    Created for every (program letter × zone) combination found in
-    GetDeviceProgramList. With 4 zones and 4 programs this produces
-    16 sensors per Pure Vision device.
-
-    State: duration in minutes (float, e.g. 15.0). Zero means the zone
-    is not irrigated in this program.
-    Extra attributes: duration_seconds, active flag, zone_id, program info.
-    """
-
-    _attr_icon                       = "mdi:timer-outline"
-    _attr_native_unit_of_measurement = "min"
-    _attr_state_class                = SensorStateClass.MEASUREMENT
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-        program_name: str,
-        program_label: str,
-        zone_id: int,
-        zone_name: str,
-    ) -> None:
-        super().__init__(coordinator)
-        self._cloud_id       = cloud_id
-        self._device_id      = device_id
-        self._program_name   = program_name
-        self._program_label  = program_label
-        self._zone_id        = zone_id
-        self._zone_name      = zone_name
-        self._attr_unique_id = f"device_{device_id}_prog_{program_name}_zone_{zone_id}_duration"
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def _zone_data(self) -> dict:
-        """Return the zone dict for this sensor's (program, zone_id) pair."""
-        for p in self.coordinator.programs.get(self._device_id, []):
-            if p.get("name") == self._program_name:
-                for z in p.get("zones", []):
-                    if z.get("id") == self._zone_id:
-                        return z
-        return {}
-
-    @property
-    def name(self) -> str:
-        return (
-            f"{self._device.get('name', 'Device')} "
-            f"Prog {self._program_name} {self._zone_name} Duration"
-        )
-
-    @property
-    def native_value(self) -> float | None:
-        zone = self._zone_data
-        return round(zone.get("duration", 0) / 60, 1) if zone else None
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        zone = self._zone_data
-        if not zone:
-            return {}
-        dur_s = zone.get("duration", 0)
-        return {
-            "duration_seconds": dur_s,
-            "duration_minutes": round(dur_s / 60, 1),
-            "active":           dur_s > 0,
-            "zone_id":          self._zone_id,
-            "program":          self._program_name,
-            "program_label":    self._program_label,
-        }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_info(self._device, self._cloud)
-
-
-class RainVisionProgramTimeSlotSensor(CoordinatorEntity, SensorEntity):
-    """Sensor representing a single start-time slot within a program.
-
-    Each program has up to 6 time slots (index 0–5). This sensor exposes
-    one slot, showing its configured time as the state and whether it is
-    active as an attribute.
-
-    State: time string 'HH:MM' if set, otherwise 'Not set'.
-    Extra attributes:
-      active      — whether this slot is enabled
-      time_index  — slot position (0–5)
-      program     — program letter ('A'–'H')
-      program_label — human-readable program name
-      hidden      — whether the slot is hidden in the app UI
-    """
-
-    _attr_icon = "mdi:clock-outline"
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-        program_name: str,
-        program_label: str,
-        time_index: int,
-    ) -> None:
-        """Initialise the time slot sensor.
-
-        Args:
-            coordinator:   Shared data coordinator.
-            cloud_id:      ID of the parent Nuvola hub.
-            device_id:     ID of the Pure Vision device.
-            program_name:  Program letter ('A'–'H').
-            program_label: Human-readable program name (e.g. 'Prato').
-            time_index:    Slot index (0–5).
-        """
-        super().__init__(coordinator)
-        self._cloud_id       = cloud_id
-        self._device_id      = device_id
-        self._program_name   = program_name
-        self._program_label  = program_label
-        self._time_index     = time_index
-        self._attr_unique_id = (
-            f"device_{device_id}_program_{program_name}_time_{time_index}"
-        )
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def _time_data(self) -> dict:
-        """Return the time slot dict for this sensor, or {}."""
-        for p in self.coordinator.programs.get(self._device_id, []):
-            if p.get("name") == self._program_name:
-                times = p.get("times", [])
-                if self._time_index < len(times):
-                    return times[self._time_index]
-        return {}
-
-    @property
-    def name(self) -> str:
-        device_name = self._device.get("name", "Device")
-        return (
-            f"{device_name} Prog {self._program_name} "
-            f"({self._program_label}) Time {self._time_index + 1}"
-        )
-
-    @property
-    def native_value(self) -> str:
-        """Return the start time string ('HH:MM'), or 'Not set' if empty."""
-        t = self._time_data
-        return t.get("time") or "Not set"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return all fields of the time slot object."""
-        t = self._time_data
-        if not t:
-            return {}
-        return {
-            "active":        t.get("active", False),
-            "time_index":    self._time_index,
-            "program":       self._program_name,
-            "program_label": self._program_label,
-            "hidden":        t.get("hidden", False),
-            "records":       t.get("records"),
-        }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_info(self._device, self._cloud)
-
-
-class RainVisionProgramWeekdaySensor(CoordinatorEntity, SensorEntity):
-    """Sensor representing a single weekday entry within a program schedule.
-
-    Created only for programs that have a weekdays list (non-cycle programs).
-    Each weekday slot exposes its name, index and isChecked state so the
-    user can see at a glance which days the program runs.
-
-    State: 'Active' if isChecked is True, 'Inactive' otherwise.
-    Extra attributes:
-      name       — localised day name (e.g. 'Lunedì')
-      index      — day index (1=Sun, 2=Mon, ..., 7=Sat)
-      is_checked — whether this day is enabled
-      program    — program letter ('A'–'H')
-      program_label — human-readable program name
-    """
-
-    _attr_icon = "mdi:calendar-week"
-
-    def __init__(
-        self,
-        coordinator: RainVisionCoordinator,
-        cloud_id: int,
-        device_id: int,
-        program_name: str,
-        program_label: str,
-        day_index: int,
-        day_name: str,
-    ) -> None:
-        """Initialise the weekday sensor.
-
-        Args:
-            coordinator:   Shared data coordinator.
-            cloud_id:      ID of the parent Nuvola hub.
-            device_id:     ID of the Pure Vision device.
-            program_name:  Program letter ('A'–'H').
-            program_label: Human-readable program name (e.g. 'Prato').
-            day_index:     Day index from the API (1=Sun … 7=Sat).
-            day_name:      Localised day name from the API (e.g. 'Lunedì').
-        """
-        super().__init__(coordinator)
-        self._cloud_id       = cloud_id
-        self._device_id      = device_id
-        self._program_name   = program_name
-        self._program_label  = program_label
-        self._day_index      = day_index
-        self._day_name       = day_name
-        self._attr_unique_id = (
-            f"device_{device_id}_program_{program_name}_weekday_{day_index}"
-        )
-
-    @property
-    def _device(self) -> dict:
-        return self.coordinator.devices.get(self._device_id, {})
-
-    @property
-    def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._cloud_id, {})
-
-    @property
-    def _weekday_data(self) -> dict:
-        """Return the weekday dict for this sensor's (program, day_index), or {}."""
-        for p in self.coordinator.programs.get(self._device_id, []):
-            if p.get("name") == self._program_name:
-                for day in p.get("weekdays", []):
-                    if day.get("index") == self._day_index:
-                        return day
-        return {}
-
-    @property
-    def name(self) -> str:
-        device_name = self._device.get("name", "Device")
-        return (
-            f"{device_name} Prog {self._program_name} "
-            f"({self._program_label}) {self._day_name}"
-        )
-
-    @property
-    def native_value(self) -> str:
-        """Return 'Active' if this weekday is checked, 'Inactive' otherwise."""
-        return "Active" if self._weekday_data.get("isChecked", False) else "Inactive"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the full weekday object fields."""
-        day = self._weekday_data
-        if not day:
-            return {}
-        return {
-            "name":          day.get("name", self._day_name),
-            "index":         day.get("index", self._day_index),
-            "is_checked":    day.get("isChecked", False),
-            "program":       self._program_name,
-            "program_label": self._program_label,
-        }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _device_info(self._device, self._cloud)
