@@ -12,9 +12,11 @@ Sensor types:
   RainVisionDeviceOnlineSensor  -- online/offline status of a device
   RainVisionActiveProgramsSensor -- which programs (A-H) are enabled
   RainVisionMeteoPauseSensor    -- current meteo-pause state
-  RainVisionProgramDetailSensor -- one sensor per program, ALL data as flat attributes:
+  RainVisionProgramDetailSensor -- one sensor per program; state = next active start time.
+                                   All program data exposed as flat extra_state_attributes:
                                    times_N_time/active/hidden, zones_N_id/name/duration_*,
-                                   weekdays_N_name/index/is_checked, type/cycle/active
+                                   weekdays_N_name/index/is_checked, type/cycle/active/even,
+                                   total_duration_minutes
 """
 from __future__ import annotations
 

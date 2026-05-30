@@ -1,0 +1,891 @@
+# Rain Vision — Grid card programmi con weekdays
+# Dashboard → Modifica → Aggiungi card → Editor manuale
+
+type: grid
+columns: 2
+square: false
+cards:
+
+  # ── Programma A — Prato ─────────────────────────────────────────────────────
+  - type: entities
+    title: "Programma A — Prato"
+    icon: mdi:calendar-clock
+    show_header_toggle: false
+    entities:
+
+      - entity: sensor.pure_vision_ev_programma_a_prato
+        name: Prossimo avvio
+        icon: mdi:clock-start
+
+      - type: section
+        label: Impostazioni
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        name: Tipo
+        icon: mdi:cog
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: cycle
+        name: Ciclo (ore)
+        icon: mdi:refresh
+        suffix: " h"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: active
+        name: Attivo
+        icon: mdi:toggle-switch
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: total_duration_minutes
+        name: Durata totale
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Orari
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_0_time
+        name: "Orario 1 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_0_active
+        name: "Orario 1 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_1_time
+        name: "Orario 2 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_1_active
+        name: "Orario 2 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_2_time
+        name: "Orario 3 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: times_2_active
+        name: "Orario 3 — active"
+        icon: mdi:check-circle-outline
+
+      - type: section
+        label: Zone
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_0_name
+        name: "Zona 1 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_0_duration_minutes
+        name: "Zona 1 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_1_name
+        name: "Zona 2 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_1_duration_minutes
+        name: "Zona 2 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_2_name
+        name: "Zona 3 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_2_duration_minutes
+        name: "Zona 3 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_3_name
+        name: "Zona 4 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: zones_3_duration_minutes
+        name: "Zona 4 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Giorni della settimana
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_0_name
+        name: "Giorno 1 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_0_is_checked
+        name: "Giorno 1 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_1_name
+        name: "Giorno 2 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_1_is_checked
+        name: "Giorno 2 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_2_name
+        name: "Giorno 3 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_2_is_checked
+        name: "Giorno 3 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_3_name
+        name: "Giorno 4 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_3_is_checked
+        name: "Giorno 4 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_4_name
+        name: "Giorno 5 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_4_is_checked
+        name: "Giorno 5 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_5_name
+        name: "Giorno 6 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_5_is_checked
+        name: "Giorno 6 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_6_name
+        name: "Giorno 7 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: weekdays_6_is_checked
+        name: "Giorno 7 — attivo"
+        icon: mdi:check-circle-outline
+
+  # ── Programma B — Piante ────────────────────────────────────────────────────
+  - type: entities
+    title: "Programma B — Piante"
+    icon: mdi:calendar-clock
+    show_header_toggle: false
+    entities:
+
+      - entity: sensor.pure_vision_ev_programma_b_piante
+        name: Prossimo avvio
+        icon: mdi:clock-start
+
+      - type: section
+        label: Impostazioni
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: type
+        name: Tipo
+        icon: mdi:cog
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: cycle
+        name: Ciclo (ore)
+        icon: mdi:refresh
+        suffix: " h"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: active
+        name: Attivo
+        icon: mdi:toggle-switch
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: total_duration_minutes
+        name: Durata totale
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Orari
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_0_time
+        name: "Orario 1 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_0_active
+        name: "Orario 1 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_1_time
+        name: "Orario 2 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_1_active
+        name: "Orario 2 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_2_time
+        name: "Orario 3 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: times_2_active
+        name: "Orario 3 — active"
+        icon: mdi:check-circle-outline
+
+      - type: section
+        label: Zone
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_0_name
+        name: "Zona 1 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_0_duration_minutes
+        name: "Zona 1 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_1_name
+        name: "Zona 2 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_1_duration_minutes
+        name: "Zona 2 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_2_name
+        name: "Zona 3 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_2_duration_minutes
+        name: "Zona 3 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_3_name
+        name: "Zona 4 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: zones_3_duration_minutes
+        name: "Zona 4 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Giorni della settimana
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_0_name
+        name: "Giorno 1 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_0_is_checked
+        name: "Giorno 1 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_1_name
+        name: "Giorno 2 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_1_is_checked
+        name: "Giorno 2 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_2_name
+        name: "Giorno 3 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_2_is_checked
+        name: "Giorno 3 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_3_name
+        name: "Giorno 4 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_3_is_checked
+        name: "Giorno 4 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_4_name
+        name: "Giorno 5 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_4_is_checked
+        name: "Giorno 5 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_5_name
+        name: "Giorno 6 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_5_is_checked
+        name: "Giorno 6 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_6_name
+        name: "Giorno 7 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_b_piante
+        attribute: weekdays_6_is_checked
+        name: "Giorno 7 — attivo"
+        icon: mdi:check-circle-outline
+
+  # ── Programma C — Orto ──────────────────────────────────────────────────────
+  - type: entities
+    title: "Programma C — Orto"
+    icon: mdi:calendar-clock
+    show_header_toggle: false
+    entities:
+
+      - entity: sensor.pure_vision_ev_programma_c_orto
+        name: Prossimo avvio
+        icon: mdi:clock-start
+
+      - type: section
+        label: Impostazioni
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: type
+        name: Tipo
+        icon: mdi:cog
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: cycle
+        name: Ciclo (ore)
+        icon: mdi:refresh
+        suffix: " h"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: active
+        name: Attivo
+        icon: mdi:toggle-switch
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: total_duration_minutes
+        name: Durata totale
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Orari
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_0_time
+        name: "Orario 1 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_0_active
+        name: "Orario 1 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_1_time
+        name: "Orario 2 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_1_active
+        name: "Orario 2 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_2_time
+        name: "Orario 3 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: times_2_active
+        name: "Orario 3 — active"
+        icon: mdi:check-circle-outline
+
+      - type: section
+        label: Zone
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_0_name
+        name: "Zona 1 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_0_duration_minutes
+        name: "Zona 1 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_1_name
+        name: "Zona 2 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_1_duration_minutes
+        name: "Zona 2 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_2_name
+        name: "Zona 3 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_2_duration_minutes
+        name: "Zona 3 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_3_name
+        name: "Zona 4 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: zones_3_duration_minutes
+        name: "Zona 4 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Giorni della settimana
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_0_name
+        name: "Giorno 1 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_0_is_checked
+        name: "Giorno 1 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_1_name
+        name: "Giorno 2 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_1_is_checked
+        name: "Giorno 2 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_2_name
+        name: "Giorno 3 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_2_is_checked
+        name: "Giorno 3 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_3_name
+        name: "Giorno 4 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_3_is_checked
+        name: "Giorno 4 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_4_name
+        name: "Giorno 5 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_4_is_checked
+        name: "Giorno 5 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_5_name
+        name: "Giorno 6 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_5_is_checked
+        name: "Giorno 6 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_6_name
+        name: "Giorno 7 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_c_orto
+        attribute: weekdays_6_is_checked
+        name: "Giorno 7 — attivo"
+        icon: mdi:check-circle-outline
+
+  # ── Programma D ─────────────────────────────────────────────────────────────
+  - type: entities
+    title: "Programma D"
+    icon: mdi:calendar-clock
+    show_header_toggle: false
+    entities:
+
+      - entity: sensor.pure_vision_ev_programma_d
+        name: Prossimo avvio
+        icon: mdi:clock-start
+
+      - type: section
+        label: Impostazioni
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: type
+        name: Tipo
+        icon: mdi:cog
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: cycle
+        name: Ciclo (ore)
+        icon: mdi:refresh
+        suffix: " h"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: active
+        name: Attivo
+        icon: mdi:toggle-switch
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: total_duration_minutes
+        name: Durata totale
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Orari
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_0_time
+        name: "Orario 1 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_0_active
+        name: "Orario 1 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_1_time
+        name: "Orario 2 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_1_active
+        name: "Orario 2 — active"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_2_time
+        name: "Orario 3 — time"
+        icon: mdi:clock-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: times_2_active
+        name: "Orario 3 — active"
+        icon: mdi:check-circle-outline
+
+      - type: section
+        label: Zone
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_0_name
+        name: "Zona 1 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_0_duration_minutes
+        name: "Zona 1 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_1_name
+        name: "Zona 2 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_1_duration_minutes
+        name: "Zona 2 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_2_name
+        name: "Zona 3 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_2_duration_minutes
+        name: "Zona 3 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_3_name
+        name: "Zona 4 — nome"
+        icon: mdi:sprinkler
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: zones_3_duration_minutes
+        name: "Zona 4 — durata"
+        icon: mdi:timer-outline
+        suffix: " min"
+
+      - type: section
+        label: Giorni della settimana
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_0_name
+        name: "Giorno 1 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_0_is_checked
+        name: "Giorno 1 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_1_name
+        name: "Giorno 2 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_1_is_checked
+        name: "Giorno 2 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_2_name
+        name: "Giorno 3 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_2_is_checked
+        name: "Giorno 3 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_3_name
+        name: "Giorno 4 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_3_is_checked
+        name: "Giorno 4 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_4_name
+        name: "Giorno 5 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_4_is_checked
+        name: "Giorno 5 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_5_name
+        name: "Giorno 6 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_5_is_checked
+        name: "Giorno 6 — attivo"
+        icon: mdi:check-circle-outline
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_6_name
+        name: "Giorno 7 — nome"
+        icon: mdi:calendar-week
+
+      - type: attribute
+        entity: sensor.pure_vision_ev_programma_d
+        attribute: weekdays_6_is_checked
+        name: "Giorno 7 — attivo"
+        icon: mdi:check-circle-outline
