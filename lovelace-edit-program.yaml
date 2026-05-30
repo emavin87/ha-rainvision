@@ -1,0 +1,201 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rain Vision — Card modifica programma con bottone Salva
+#
+# PRIMA DI USARE: crea questi helper in HA:
+# Impostazioni → Dispositivi e servizi → Helper → + Crea helper
+#
+#  input_select  rainvision_programma     Opzioni: A, B, C, D
+#  input_select  rainvision_zona          Opzioni: "1", "2", "4", "8"
+#  input_number  rainvision_durata_min    Min:0 Max:120 Step:5 Unit:min
+#  input_text    rainvision_orario        Regex: ^([01]\d|2[0-3]):[0-5]\d$
+#  input_number  rainvision_ciclo_ore     Min:1 Max:168 Step:1 Unit:h
+#  input_number  rainvision_time_index    Min:0 Max:5 Step:1
+# ─────────────────────────────────────────────────────────────────────────────
+
+type: vertical-stack
+cards:
+
+  # ── Intestazione ─────────────────────────────────────────────────────────
+  - type: custom:button-card
+    name: "✏️ Modifica Programma"
+    icon: mdi:pencil-circle
+    show_state: false
+    styles:
+      card:
+        - background: "linear-gradient(135deg, #1a3a20, #2d7a3a)"
+        - color: white
+        - font-size: 15px
+        - font-weight: bold
+        - padding: 14px
+        - border-radius: 12px
+      icon:
+        - color: white
+        - width: 26px
+
+  # ── Selezione programma e zona ────────────────────────────────────────────
+  - type: entities
+    title: "Seleziona"
+    show_header_toggle: false
+    entities:
+      - entity: input_select.rainvision_programma
+        name: Programma
+        icon: mdi:calendar-clock
+      - entity: input_select.rainvision_zona
+        name: Zona (ID)
+        icon: mdi:sprinkler
+
+  # ── Modifica durata zona ───────────────────────────────────────────────────
+  - type: entities
+    title: "💧 Durata zona"
+    show_header_toggle: false
+    entities:
+      - entity: input_number.rainvision_durata_min
+        name: Durata (minuti)
+        icon: mdi:timer-outline
+
+  - type: custom:button-card
+    name: "Salva durata zona"
+    icon: mdi:content-save
+    show_state: false
+    styles:
+      card:
+        - background: "#2d7a3a"
+        - border-radius: 10px
+        - padding: 12px
+        - margin: 0 4px
+      name:
+        - color: white
+        - font-size: 13px
+        - font-weight: bold
+      icon:
+        - color: white
+        - width: 22px
+    tap_action:
+      action: call-service
+      service: rainvision.set_zone_duration
+      service_data:
+        device_puid: "1000005059"
+        program: "[[[ return states['input_select.rainvision_programma'].state ]]]"
+        zone_id: "[[[ return parseInt(states['input_select.rainvision_zona'].state) ]]]"
+        duration_seconds: "[[[ return parseInt(states['input_number.rainvision_durata_min'].state) * 60 ]]]"
+
+  # ── Modifica orario di avvio ───────────────────────────────────────────────
+  - type: entities
+    title: "🕐 Orario di avvio"
+    show_header_toggle: false
+    entities:
+      - entity: input_text.rainvision_orario
+        name: Orario (HH:MM)
+        icon: mdi:clock-outline
+      - entity: input_number.rainvision_time_index
+        name: Slot orario (0-5)
+        icon: mdi:numeric
+
+  - type: custom:button-card
+    name: "Salva orario di avvio"
+    icon: mdi:clock-check
+    show_state: false
+    styles:
+      card:
+        - background: "#00838f"
+        - border-radius: 10px
+        - padding: 12px
+        - margin: 0 4px
+      name:
+        - color: white
+        - font-size: 13px
+        - font-weight: bold
+      icon:
+        - color: white
+        - width: 22px
+    tap_action:
+      action: call-service
+      service: rainvision.set_program_start_time
+      service_data:
+        device_puid: "1000005059"
+        program: "[[[ return states['input_select.rainvision_programma'].state ]]]"
+        time_index: "[[[ return parseInt(states['input_number.rainvision_time_index'].state) ]]]"
+        time: "[[[ return states['input_text.rainvision_orario'].state ]]]"
+        active: true
+
+  # ── Modifica tipo schedulazione + ciclo ────────────────────────────────────
+  - type: entities
+    title: "🔄 Tipo schedulazione e ciclo"
+    show_header_toggle: false
+    entities:
+      - entity: input_select.rainvision_tipo_ciclo
+        name: Tipo schedulazione
+        icon: mdi:calendar-sync
+      - entity: input_number.rainvision_ciclo_ore
+        name: Ogni quante ore (se tipo = cycle)
+        icon: mdi:refresh
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: custom:button-card
+        name: "Salva tipo"
+        icon: mdi:calendar-sync
+        show_state: false
+        styles:
+          card:
+            - background: "#6a1b9a"
+            - border-radius: 10px
+            - padding: 12px
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 22px
+        tap_action:
+          action: call-service
+          service: rainvision.set_program_cycle
+          service_data:
+            device_puid: "1000005059"
+            program: "[[[ return states['input_select.rainvision_programma'].state ]]]"
+            cycle_hours: "[[[ return parseInt(states['input_number.rainvision_ciclo_ore'].state) ]]]"
+
+      - type: custom:button-card
+        name: "Salva ciclo (ore)"
+        icon: mdi:refresh-circle
+        show_state: false
+        styles:
+          card:
+            - background: "#e65100"
+            - border-radius: 10px
+            - padding: 12px
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 22px
+        tap_action:
+          action: call-service
+          service: rainvision.set_program_cycle
+          service_data:
+            device_puid: "1000005059"
+            program: "[[[ return states['input_select.rainvision_programma'].state ]]]"
+            cycle_hours: "[[[ return parseInt(states['input_number.rainvision_ciclo_ore'].state) ]]]"
+
+  # ── Abilita / Disabilita programma ─────────────────────────────────────────
+  - type: entities
+    title: "⚡ Stato programma"
+    show_header_toggle: false
+    entities:
+      - entity: switch.pure_vision_ev_programma_a_prato
+        name: "Programma A — Prato"
+        icon: mdi:toggle-switch
+      - entity: switch.pure_vision_ev_programma_b_piante
+        name: "Programma B — Piante"
+        icon: mdi:toggle-switch
+      - entity: switch.pure_vision_ev_programma_c_orto
+        name: "Programma C — Orto"
+        icon: mdi:toggle-switch
+      - entity: switch.pure_vision_ev_programma_d
+        name: "Programma D"
+        icon: mdi:toggle-switch

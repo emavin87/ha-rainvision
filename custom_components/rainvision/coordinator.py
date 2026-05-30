@@ -122,6 +122,23 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                 continue
             try:
                 programs = await self.api.get_device_program_list(puid)
+
+                # Build a lookup: zone_progressive -> display name.
+                # Zone names live in device["zonenames"] from GetPlaces,
+                # not inside GetDeviceProgramList, so we inject them here.
+                zone_names = {
+                    z["zone_progressive"]: (
+                        z.get("custom_name") or z.get("default_name", f"Zone {z['zone_progressive']}")
+                    )
+                    for z in device.get("zonenames", [])
+                }
+
+                # Inject the display name into each zone of every program
+                for prog in programs:
+                    for zone in prog.get("zones", []):
+                        progressive = zone.get("progressive")
+                        zone["name"] = zone_names.get(progressive, f"Zone {progressive}")
+
                 self.programs[device_id] = programs
             except (RainVisionApiError, RainVisionAuthError) as err:
                 _LOGGER.warning(

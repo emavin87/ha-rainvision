@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rain Vision — Helper per la card di modifica programmi
+# Il campo "id" forza l'entity_id esatto indipendentemente dal nome
+# ─────────────────────────────────────────────────────────────────────────────
+
+input_select:
+  rainvision_programma:
+    name: "Rain Vision — Programma"
+    icon: mdi:calendar-clock
+    options:
+      - "A"
+      - "B"
+      - "C"
+      - "D"
+    initial: "A"
+
+  rainvision_zona:
+    name: "Rain Vision — Zona (ID)"
+    icon: mdi:sprinkler
+    options:
+      - "1"
+      - "2"
+      - "4"
+      - "8"
+    initial: "1"
+
+  rainvision_tipo_ciclo:
+    name: "Rain Vision — Tipo schedulazione"
+    icon: mdi:calendar-sync
+    options:
+      - "cycle"
+      - "weekdays"
+    initial: "cycle"
+
+input_number:
+  rainvision_durata_min:
+    name: "Rain Vision — Durata zona (min)"
+    icon: mdi:timer-outline
+    min: 0
+    max: 120
+    step: 5
+    unit_of_measurement: "min"
+    initial: 10
+
+  rainvision_ciclo_ore:
+    name: "Rain Vision — Ciclo (ore)"
+    icon: mdi:refresh
+    min: 1
+    max: 168
+    step: 1
+    unit_of_measurement: "h"
+    initial: 48
+
+  rainvision_time_index:
+    name: "Rain Vision — Slot orario (0-5)"
+    icon: mdi:numeric
+    min: 0
+    max: 5
+    step: 1
+    initial: 0
+
+input_text:
+  rainvision_orario:
+    name: "Rain Vision — Orario avvio"
+    icon: mdi:clock-outline
+    initial: "06:30"
+    pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"

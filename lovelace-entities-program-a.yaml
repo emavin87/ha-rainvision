@@ -1,0 +1,480 @@
+type: entities
+title: "Programma A — Prato"
+entities:
+
+  # Stato principale
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Prossimo avvio"
+    icon: mdi:clock-start
+
+  # ── Impostazioni ────────────────────────────────────────────────────────────
+  - type: section
+    label: "⚙️ Impostazioni"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Tipo"
+    type: attribute
+    attribute: type
+    icon: mdi:cog
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Ciclo"
+      type: attribute
+      attribute: cycle
+      icon: mdi:refresh
+      suffix: " h"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Attivo"
+    type: attribute
+    attribute: active
+    icon: mdi:toggle-switch
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Even"
+    type: attribute
+    attribute: even
+    icon: mdi:code-tags
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Durata totale"
+    type: attribute
+    attribute: total_duration_minutes
+    icon: mdi:timer-outline
+    suffix: " min"
+
+  # ── Orari ───────────────────────────────────────────────────────────────────
+  - type: section
+    label: "🕐 Orari"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 1"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_0_time   ?? "—";
+        const active = attrs.times_0_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 2"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_1_time   ?? "—";
+        const active = attrs.times_1_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 3"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_2_time   ?? "—";
+        const active = attrs.times_2_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 4"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_3_time   ?? "—";
+        const active = attrs.times_3_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 5"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_4_time   ?? "—";
+        const active = attrs.times_4_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  - type: custom:button-card
+    entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Orario 6"
+    show_state: false
+    show_label: true
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        const time   = attrs.times_5_time   ?? "—";
+        const active = attrs.times_5_active ? "✅" : "❌";
+        return `${time}  ${active}`;
+      ]]]
+    icon: mdi:clock-outline
+    styles:
+      card:
+        - background: transparent
+        - box-shadow: none
+        - border-bottom: "1px solid var(--divider-color)"
+        - border-radius: 0
+        - padding: 4px 0
+      name:
+        - font-size: 14px
+        - color: "var(--primary-text-color)"
+        - text-align: left
+      label:
+        - font-size: 14px
+        - color: "var(--secondary-text-color)"
+        - text-align: right
+        - flex-grow: 1
+      icon:
+        - width: 24px
+        - color: "var(--state-icon-color)"
+
+  # ── Zone ────────────────────────────────────────────────────────────────────
+  - type: section
+    label: "💧 Zone"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 1 — ID"
+    type: attribute
+    attribute: zones_0_id
+    icon: mdi:numeric-1-circle-outline
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 1 — nome"
+    type: attribute
+    attribute: zones_0_name
+    icon: mdi:sprinkler
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 1 — durata (sec)"
+    type: attribute
+    attribute: zones_0_duration_seconds
+    icon: mdi:timer
+    suffix: " s"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 1 — durata (min)"
+    type: attribute
+    attribute: zones_0_duration_minutes
+    icon: mdi:timer-outline
+    suffix: " min"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 1 — active"
+    type: attribute
+    attribute: zones_0_active
+    icon: mdi:water
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 2 — ID"
+    type: attribute
+    attribute: zones_1_id
+    icon: mdi:numeric-2-circle-outline
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 2 — nome"
+    type: attribute
+    attribute: zones_1_name
+    icon: mdi:sprinkler
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 2 — durata (sec)"
+    type: attribute
+    attribute: zones_1_duration_seconds
+    icon: mdi:timer
+    suffix: " s"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 2 — durata (min)"
+    type: attribute
+    attribute: zones_1_duration_minutes
+    icon: mdi:timer-outline
+    suffix: " min"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 2 — active"
+    type: attribute
+    attribute: zones_1_active
+    icon: mdi:water
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 3 — ID"
+    type: attribute
+    attribute: zones_2_id
+    icon: mdi:numeric-3-circle-outline
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 3 — nome"
+    type: attribute
+    attribute: zones_2_name
+    icon: mdi:sprinkler
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 3 — durata (sec)"
+    type: attribute
+    attribute: zones_2_duration_seconds
+    icon: mdi:timer
+    suffix: " s"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 3 — durata (min)"
+    type: attribute
+    attribute: zones_2_duration_minutes
+    icon: mdi:timer-outline
+    suffix: " min"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 3 — active"
+    type: attribute
+    attribute: zones_2_active
+    icon: mdi:water
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 4 — ID"
+    type: attribute
+    attribute: zones_3_id
+    icon: mdi:numeric-4-circle-outline
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 4 — nome"
+    type: attribute
+    attribute: zones_3_name
+    icon: mdi:sprinkler
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 4 — durata (sec)"
+    type: attribute
+    attribute: zones_3_duration_seconds
+    icon: mdi:timer
+    suffix: " s"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 4 — durata (min)"
+    type: attribute
+    attribute: zones_3_duration_minutes
+    icon: mdi:timer-outline
+    suffix: " min"
+
+  - entity: sensor.pure_vision_ev_programma_a_prato
+    name: "Zona 4 — active"
+    type: attribute
+    attribute: zones_3_active
+    icon: mdi:water
+
+  # ── Giorni della settimana (solo se type != cycle) ───────────────────────────
+  - type: section
+    label: "📅 Giorni della settimana"
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Domenica"
+      type: attribute
+      attribute: weekdays_0_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Lunedì"
+      type: attribute
+      attribute: weekdays_1_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Martedì"
+      type: attribute
+      attribute: weekdays_2_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Mercoledì"
+      type: attribute
+      attribute: weekdays_3_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Giovedì"
+      type: attribute
+      attribute: weekdays_4_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Venerdì"
+      type: attribute
+      attribute: weekdays_5_is_checked
+      icon: mdi:calendar-week
+
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.pure_vision_ev_programma_a_prato
+        attribute: type
+        state_not: "cycle"
+    row:
+      entity: sensor.pure_vision_ev_programma_a_prato
+      name: "Sabato"
+      type: attribute
+      attribute: weekdays_6_is_checked
+      icon: mdi:calendar-week

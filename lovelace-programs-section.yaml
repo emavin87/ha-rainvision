@@ -1,0 +1,1168 @@
+title: 📅 Programmi
+type: grid
+cards:
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROGRAMMA A — PRATO
+  # ════════════════════════════════════════════════════════════════════════════
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-template-rows: auto
+      gap: 8px
+    cards:
+
+      - type: custom:button-card
+        name: "Programma A — Prato"
+        icon: mdi:calendar-clock
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#1a3a20"
+            - color: "#8dc63f"
+            - font-size: 14px
+            - font-weight: bold
+            - padding: 10px 16px
+            - border-radius: 12px
+          icon:
+            - color: "#8dc63f"
+
+      - type: custom:button-card
+        entity: sensor.pure_vision_ev_programma_a_prato
+        name: "Prossimo avvio"
+        show_state: true
+        icon: mdi:clock-start
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#e8f5e9"
+            - border: "1px solid #8dc63f"
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 11px
+            - color: "#2d7a3a"
+          state:
+            - font-size: 18px
+            - font-weight: bold
+            - color: "#1a3a20"
+          icon:
+            - color: "#8dc63f"
+            - width: 22px
+
+      - type: custom:button-card
+        name: "Tipo"
+        show_label: true
+        show_state: false
+        icon: mdi:cog
+        label: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.type ?? '—' ]]]"
+        styles:
+          card:
+            - background: "#f5f5f5"
+            - border: "1px solid #dddddd"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#333333"
+          icon:
+            - color: "#aaaaaa"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Ciclo"
+        show_label: true
+        show_state: false
+        icon: mdi:refresh
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.cycle ?? '—') + ' h' ]]]"
+        styles:
+          card:
+            - background: "#fff8e1"
+            - border: "1px solid #f9a825"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#e65100"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#e65100"
+          icon:
+            - color: "#f9a825"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Durata totale"
+        show_label: true
+        show_state: false
+        icon: mdi:timer-outline
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.total_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "#e3f2fd"
+            - border: "1px solid #00b5e2"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#00838f"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#00838f"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "🕐 Orari"
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#37474f"
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+            - padding: 6px 12px
+            - border-radius: 8px
+          icon:
+            - width: 0px
+
+      - type: custom:button-card
+        name: "Orario 1"
+        show_label: true
+        show_state: false
+        icon: mdi:clock-outline
+        label: >
+          [[[
+            const a = states['sensor.pure_vision_ev_programma_a_prato']?.attributes;
+            return (a?.times_0_time ?? '—') + (a?.times_0_active ? ' ✓' : ' ✗');
+          ]]]
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_0_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_0_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 13px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_0_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Orario 2"
+        show_label: true
+        show_state: false
+        icon: mdi:clock-outline
+        label: >
+          [[[
+            const a = states['sensor.pure_vision_ev_programma_a_prato']?.attributes;
+            return (a?.times_1_time ?? '—') + (a?.times_1_active ? ' ✓' : ' ✗');
+          ]]]
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_1_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_1_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 13px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_1_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Orario 3"
+        show_label: true
+        show_state: false
+        icon: mdi:clock-outline
+        label: >
+          [[[
+            const a = states['sensor.pure_vision_ev_programma_a_prato']?.attributes;
+            return (a?.times_2_time ?? '—') + (a?.times_2_active ? ' ✓' : ' ✗');
+          ]]]
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_2_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_2_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 13px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.times_2_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "💧 Zone"
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#37474f"
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+            - padding: 6px 12px
+            - border-radius: 8px
+          icon:
+            - width: 0px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_name ?? 'Zona 1' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_0_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_name ?? 'Zona 2' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_1_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_name ?? 'Zona 3' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:flower
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_2_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_name ?? 'Zona 4' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprout
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_a_prato']?.attributes?.zones_3_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "On/Off"
+        entity: switch.pure_vision_ev_programma_a_prato
+        show_state: true
+        icon: mdi:toggle-switch
+        view_layout:
+          grid-column: 1 / -1
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: "#e8f5e9"
+                - border: "1px solid #8dc63f"
+              name:
+                - color: "#2d7a3a"
+              icon:
+                - color: "#8dc63f"
+          - value: "off"
+            styles:
+              card:
+                - background: "#ffebee"
+                - border: "1px solid #ef9a9a"
+              name:
+                - color: "#c62828"
+              icon:
+                - color: "#ef9a9a"
+        styles:
+          card:
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 13px
+            - font-weight: bold
+          icon:
+            - width: 22px
+        tap_action:
+          action: toggle
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROGRAMMA B — PIANTE
+  # ════════════════════════════════════════════════════════════════════════════
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-template-rows: auto
+      gap: 8px
+    cards:
+
+      - type: custom:button-card
+        name: "Programma B — Piante"
+        icon: mdi:calendar-clock
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#1a3a20"
+            - color: "#8dc63f"
+            - font-size: 14px
+            - font-weight: bold
+            - padding: 10px 16px
+            - border-radius: 12px
+          icon:
+            - color: "#8dc63f"
+
+      - type: custom:button-card
+        entity: sensor.pure_vision_ev_programma_b_piante
+        name: "Prossimo avvio"
+        show_state: true
+        icon: mdi:clock-start
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#e8f5e9"
+            - border: "1px solid #8dc63f"
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 11px
+            - color: "#2d7a3a"
+          state:
+            - font-size: 18px
+            - font-weight: bold
+            - color: "#1a3a20"
+          icon:
+            - color: "#8dc63f"
+            - width: 22px
+
+      - type: custom:button-card
+        name: "Tipo"
+        show_label: true
+        show_state: false
+        icon: mdi:cog
+        label: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.type ?? '—' ]]]"
+        styles:
+          card:
+            - background: "#f5f5f5"
+            - border: "1px solid #dddddd"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#333333"
+          icon:
+            - color: "#aaaaaa"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Ciclo"
+        show_label: true
+        show_state: false
+        icon: mdi:refresh
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.cycle ?? '—') + ' h' ]]]"
+        styles:
+          card:
+            - background: "#fff8e1"
+            - border: "1px solid #f9a825"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#e65100"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#e65100"
+          icon:
+            - color: "#f9a825"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Durata totale"
+        show_label: true
+        show_state: false
+        icon: mdi:timer-outline
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.total_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "#e3f2fd"
+            - border: "1px solid #00b5e2"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#00838f"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#00838f"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "💧 Zone"
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#37474f"
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+            - padding: 6px 12px
+            - border-radius: 8px
+          icon:
+            - width: 0px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_name ?? 'Zona 1' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_0_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_name ?? 'Zona 2' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_1_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_name ?? 'Zona 3' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:flower
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_2_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_name ?? 'Zona 4' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprout
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_b_piante']?.attributes?.zones_3_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "On/Off"
+        entity: switch.pure_vision_ev_programma_b_piante
+        show_state: true
+        icon: mdi:toggle-switch
+        view_layout:
+          grid-column: 1 / -1
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: "#e8f5e9"
+                - border: "1px solid #8dc63f"
+              name:
+                - color: "#2d7a3a"
+              icon:
+                - color: "#8dc63f"
+          - value: "off"
+            styles:
+              card:
+                - background: "#ffebee"
+                - border: "1px solid #ef9a9a"
+              name:
+                - color: "#c62828"
+              icon:
+                - color: "#ef9a9a"
+        styles:
+          card:
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 13px
+            - font-weight: bold
+          icon:
+            - width: 22px
+        tap_action:
+          action: toggle
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROGRAMMA C — ORTO
+  # ════════════════════════════════════════════════════════════════════════════
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-template-rows: auto
+      gap: 8px
+    cards:
+
+      - type: custom:button-card
+        name: "Programma C — Orto"
+        icon: mdi:calendar-clock
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#1a3a20"
+            - color: "#8dc63f"
+            - font-size: 14px
+            - font-weight: bold
+            - padding: 10px 16px
+            - border-radius: 12px
+          icon:
+            - color: "#8dc63f"
+
+      - type: custom:button-card
+        entity: sensor.pure_vision_ev_programma_c_orto
+        name: "Prossimo avvio"
+        show_state: true
+        icon: mdi:clock-start
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#e8f5e9"
+            - border: "1px solid #8dc63f"
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 11px
+            - color: "#2d7a3a"
+          state:
+            - font-size: 18px
+            - font-weight: bold
+            - color: "#1a3a20"
+          icon:
+            - color: "#8dc63f"
+            - width: 22px
+
+      - type: custom:button-card
+        name: "Tipo"
+        show_label: true
+        show_state: false
+        icon: mdi:cog
+        label: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.type ?? '—' ]]]"
+        styles:
+          card:
+            - background: "#f5f5f5"
+            - border: "1px solid #dddddd"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#333333"
+          icon:
+            - color: "#aaaaaa"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Ciclo"
+        show_label: true
+        show_state: false
+        icon: mdi:refresh
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.cycle ?? '—') + ' h' ]]]"
+        styles:
+          card:
+            - background: "#fff8e1"
+            - border: "1px solid #f9a825"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#e65100"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#e65100"
+          icon:
+            - color: "#f9a825"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Durata totale"
+        show_label: true
+        show_state: false
+        icon: mdi:timer-outline
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.total_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "#e3f2fd"
+            - border: "1px solid #00b5e2"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#00838f"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#00838f"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "💧 Zone"
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#37474f"
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+            - padding: 6px 12px
+            - border-radius: 8px
+          icon:
+            - width: 0px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_name ?? 'Zona 1' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_0_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_name ?? 'Zona 2' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_1_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_name ?? 'Zona 3' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:flower
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_2_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_name ?? 'Zona 4' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprout
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_c_orto']?.attributes?.zones_3_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "On/Off"
+        entity: switch.pure_vision_ev_programma_c_orto
+        show_state: true
+        icon: mdi:toggle-switch
+        view_layout:
+          grid-column: 1 / -1
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: "#e8f5e9"
+                - border: "1px solid #8dc63f"
+              name:
+                - color: "#2d7a3a"
+              icon:
+                - color: "#8dc63f"
+          - value: "off"
+            styles:
+              card:
+                - background: "#ffebee"
+                - border: "1px solid #ef9a9a"
+              name:
+                - color: "#c62828"
+              icon:
+                - color: "#ef9a9a"
+        styles:
+          card:
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 13px
+            - font-weight: bold
+          icon:
+            - width: 22px
+        tap_action:
+          action: toggle
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROGRAMMA D
+  # ════════════════════════════════════════════════════════════════════════════
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-template-rows: auto
+      gap: 8px
+    cards:
+
+      - type: custom:button-card
+        name: "Programma D"
+        icon: mdi:calendar-clock
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#1a3a20"
+            - color: "#8dc63f"
+            - font-size: 14px
+            - font-weight: bold
+            - padding: 10px 16px
+            - border-radius: 12px
+          icon:
+            - color: "#8dc63f"
+
+      - type: custom:button-card
+        entity: sensor.pure_vision_ev_programma_d
+        name: "Prossimo avvio"
+        show_state: true
+        icon: mdi:clock-start
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#e8f5e9"
+            - border: "1px solid #8dc63f"
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 11px
+            - color: "#2d7a3a"
+          state:
+            - font-size: 18px
+            - font-weight: bold
+            - color: "#1a3a20"
+          icon:
+            - color: "#8dc63f"
+            - width: 22px
+
+      - type: custom:button-card
+        name: "Tipo"
+        show_label: true
+        show_state: false
+        icon: mdi:cog
+        label: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.type ?? '—' ]]]"
+        styles:
+          card:
+            - background: "#f5f5f5"
+            - border: "1px solid #dddddd"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#777777"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#333333"
+          icon:
+            - color: "#aaaaaa"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Ciclo"
+        show_label: true
+        show_state: false
+        icon: mdi:refresh
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.cycle ?? '—') + ' h' ]]]"
+        styles:
+          card:
+            - background: "#fff8e1"
+            - border: "1px solid #f9a825"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#e65100"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#e65100"
+          icon:
+            - color: "#f9a825"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "Durata totale"
+        show_label: true
+        show_state: false
+        icon: mdi:timer-outline
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.total_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "#e3f2fd"
+            - border: "1px solid #00b5e2"
+            - border-radius: 10px
+            - padding: 12px 6px
+          name:
+            - font-size: 11px
+            - color: "#00838f"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "#00838f"
+          icon:
+            - color: "#00b5e2"
+            - width: 18px
+
+      - type: custom:button-card
+        name: "💧 Zone"
+        show_state: false
+        view_layout:
+          grid-column: 1 / -1
+        styles:
+          card:
+            - background: "#37474f"
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+            - padding: 6px 12px
+            - border-radius: 8px
+          icon:
+            - width: 0px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_name ?? 'Zona 1' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_0_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_name ?? 'Zona 2' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprinkler
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_1_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_name ?? 'Zona 3' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:flower
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_2_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_name ?? 'Zona 4' ]]]"
+        show_label: true
+        show_state: false
+        icon: mdi:sprout
+        label: "[[[ return (states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_duration_minutes ?? '—') + ' min' ]]]"
+        styles:
+          card:
+            - background: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_active ? '#e8f5e9' : '#f5f5f5' ]]]"
+            - border: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_active ? '1px solid #8dc63f' : '1px solid #dddddd' ]]]"
+            - border-radius: 10px
+            - padding: 10px 4px
+          name:
+            - font-size: 11px
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_active ? '#2d7a3a' : '#777777' ]]]"
+          label:
+            - font-size: 14px
+            - font-weight: bold
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_active ? '#2d7a3a' : '#aaaaaa' ]]]"
+          icon:
+            - color: "[[[ return states['sensor.pure_vision_ev_programma_d']?.attributes?.zones_3_active ? '#8dc63f' : '#cccccc' ]]]"
+            - width: 20px
+
+      - type: custom:button-card
+        name: "On/Off"
+        entity: switch.pure_vision_ev_programma_d
+        show_state: true
+        icon: mdi:toggle-switch
+        view_layout:
+          grid-column: 1 / -1
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: "#e8f5e9"
+                - border: "1px solid #8dc63f"
+              name:
+                - color: "#2d7a3a"
+              icon:
+                - color: "#8dc63f"
+          - value: "off"
+            styles:
+              card:
+                - background: "#ffebee"
+                - border: "1px solid #ef9a9a"
+              name:
+                - color: "#c62828"
+              icon:
+                - color: "#ef9a9a"
+        styles:
+          card:
+            - border-radius: 10px
+            - padding: 10px
+          name:
+            - font-size: 13px
+            - font-weight: bold
+          icon:
+            - width: 22px
+        tap_action:
+          action: toggle
