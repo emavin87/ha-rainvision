@@ -15,6 +15,7 @@ Sensor types:
   RainVisionProgramDetailSensor       — next start time + full schedule summary
   RainVisionProgramZoneDurationSensor — duration of one zone in one program
   RainVisionProgramTimeSlotSensor     — one start-time slot (0–5) of a program
+  RainVisionProgramWeekdaySensor      — one weekday entry (name, index, isChecked) of a program
 """
 from __future__ import annotations
 
@@ -97,6 +98,16 @@ async def async_setup_entry(
                                 coordinator, cloud_id, device_id,
                                 letter, label,
                                 time_index=time_index,
+                            )
+                        )
+                    # One weekday sensor per weekday entry (only if weekdays list is present)
+                    for day in prog_data.get("weekdays", []):
+                        entities.append(
+                            RainVisionProgramWeekdaySensor(
+                                coordinator, cloud_id, device_id,
+                                letter, label,
+                                day_index=day.get("index"),
+                                day_name=day.get("name", f"Day {day.get('index')}"),
                             )
                         )
 
@@ -631,6 +642,106 @@ class RainVisionProgramTimeSlotSensor(CoordinatorEntity, SensorEntity):
             "program_label": self._program_label,
             "hidden":        t.get("hidden", False),
             "records":       t.get("records"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_info(self._device, self._cloud)
+
+
+class RainVisionProgramWeekdaySensor(CoordinatorEntity, SensorEntity):
+    """Sensor representing a single weekday entry within a program schedule.
+
+    Created only for programs that have a weekdays list (non-cycle programs).
+    Each weekday slot exposes its name, index and isChecked state so the
+    user can see at a glance which days the program runs.
+
+    State: 'Active' if isChecked is True, 'Inactive' otherwise.
+    Extra attributes:
+      name       — localised day name (e.g. 'Lunedì')
+      index      — day index (1=Sun, 2=Mon, ..., 7=Sat)
+      is_checked — whether this day is enabled
+      program    — program letter ('A'–'H')
+      program_label — human-readable program name
+    """
+
+    _attr_icon = "mdi:calendar-week"
+
+    def __init__(
+        self,
+        coordinator: RainVisionCoordinator,
+        cloud_id: int,
+        device_id: int,
+        program_name: str,
+        program_label: str,
+        day_index: int,
+        day_name: str,
+    ) -> None:
+        """Initialise the weekday sensor.
+
+        Args:
+            coordinator:   Shared data coordinator.
+            cloud_id:      ID of the parent Nuvola hub.
+            device_id:     ID of the Pure Vision device.
+            program_name:  Program letter ('A'–'H').
+            program_label: Human-readable program name (e.g. 'Prato').
+            day_index:     Day index from the API (1=Sun … 7=Sat).
+            day_name:      Localised day name from the API (e.g. 'Lunedì').
+        """
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._device_id      = device_id
+        self._program_name   = program_name
+        self._program_label  = program_label
+        self._day_index      = day_index
+        self._day_name       = day_name
+        self._attr_unique_id = (
+            f"device_{device_id}_program_{program_name}_weekday_{day_index}"
+        )
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def _weekday_data(self) -> dict:
+        """Return the weekday dict for this sensor's (program, day_index), or {}."""
+        for p in self.coordinator.programs.get(self._device_id, []):
+            if p.get("name") == self._program_name:
+                for day in p.get("weekdays", []):
+                    if day.get("index") == self._day_index:
+                        return day
+        return {}
+
+    @property
+    def name(self) -> str:
+        device_name = self._device.get("name", "Device")
+        return (
+            f"{device_name} Prog {self._program_name} "
+            f"({self._program_label}) {self._day_name}"
+        )
+
+    @property
+    def native_value(self) -> str:
+        """Return 'Active' if this weekday is checked, 'Inactive' otherwise."""
+        return "Active" if self._weekday_data.get("isChecked", False) else "Inactive"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the full weekday object fields."""
+        day = self._weekday_data
+        if not day:
+            return {}
+        return {
+            "name":          day.get("name", self._day_name),
+            "index":         day.get("index", self._day_index),
+            "is_checked":    day.get("isChecked", False),
+            "program":       self._program_name,
+            "program_label": self._program_label,
         }
 
     @property
