@@ -24,7 +24,7 @@ UPDATE_INTERVAL = 300  # 5 minutes
 DEFAULT_MANUAL_DURATION = 10  # minutes
 
 # Valid irrigation program letters (A through H)
-PROGRAMS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+PROGRAMS = ["A", "B", "C", "D"]  # E-H not yet supported
 
 # ── Service names ─────────────────────────────────────────────────────────────
 SVC_MANUAL_START      = "manual_start"

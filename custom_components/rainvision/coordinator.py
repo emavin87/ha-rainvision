@@ -15,6 +15,7 @@ whenever _async_update_data() completes successfully.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
@@ -59,6 +60,8 @@ class RainVisionCoordinator(DataUpdateCoordinator):
         self.devices:  dict[int, dict]  = {}
         self.programs: dict[int, list]  = {}
         self.realtime: dict[int, dict]  = {}
+        self.scan:     dict[int, dict]  = {}   # device_id -> peer dict from nuvola/scan/full
+        self.sensors:  dict[int, dict]  = {}   # device_id -> sensor device dict (ACQUA VISION etc.)
 
     async def _async_update_data(self) -> dict:
         """Fetch all Rain Vision data from the API.
@@ -149,11 +152,15 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                     for z in device.get("zonenames", [])
                 }
 
-                # Inject the display name into each zone of every program
+                # Inject zone display names from GetPlaces into each program zone
                 for prog in programs:
                     for zone in prog.get("zones", []):
                         progressive = zone.get("progressive")
                         zone["name"] = zone_names.get(progressive, f"Zone {progressive}")
+
+                # Filter out programs E-H (not yet supported)
+                # They may contain JS date strings in times and are unused
+                programs = [p for p in programs if p.get("name") in ("A", "B", "C", "D")]
 
                 self.programs[device_id] = programs
             except (RainVisionApiError, RainVisionAuthError) as err:

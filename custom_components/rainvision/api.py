@@ -306,7 +306,14 @@ class RainVisionApi:
         tz_offset = datetime.datetime.now().astimezone().strftime("%z")
         # Format as 'GMT+0200' matching what the webapp sends
         offset_str = f"GMT{tz_offset[:3]}{tz_offset[3:]}"
-        payload = {"id": puid, "offset": offset_str}
+        # Compute UTC offset in minutes
+        import datetime as _dt
+        tz_offset_minutes = int(_dt.datetime.now().astimezone().utcoffset().total_seconds() / 60)
+        payload = {
+            "id":         puid,
+            "offset":     offset_str,
+            "tzOffset":   tz_offset_minutes,
+        }
         try:
             async with self._session.post(
                 f"{BASE_URL}/GetDeviceProgramList",
@@ -383,6 +390,60 @@ class RainVisionApi:
             raise RainVisionApiError(f"Connection error: {err}") from err
 
     # ── Manual irrigation commands ────────────────────────────────────────────
+
+    async def get_nuvola_scan(
+        self,
+        cloud_puid: str,
+        force_refresh: bool = False,
+        utc_offset_minutes: int = 120,
+    ) -> list[dict]:
+        """Scan all BLE devices visible to the Nuvola hub.
+
+        Calls POST /api/v5/nuvola/scan/full. Returns a list of peer dicts,
+        each representing a BLE device in range of the hub. Each peer has:
+          - puid        : device puid (int)
+          - rssi        : BLE signal strength (int, higher = better)
+          - battery     : battery level (int %)
+          - paired      : whether the device is paired to this cloud
+          - fw          : firmware version string
+          - hwid        : hardware version int
+          - devicetype  : device type object
+          - device      : full device object (same structure as GetPlaces)
+          - mdata       : raw BLE manufacturer data hex string
+          - timestamp   : scan timestamp (at response root)
+
+        Args:
+            cloud_puid:          Nuvola hub puid (e.g. '2000001121').
+            force_refresh:       If True, forces a new BLE scan.
+            utc_offset_minutes:  UTC offset in minutes (default 120 = UTC+2).
+
+        Returns:
+            List of peer dicts from the scan response.
+
+        Raises:
+            RainVisionAuthError: On HTTP 401.
+            RainVisionApiError:  On network or server errors.
+        """
+        payload = {
+            "cloud_puid":         cloud_puid,
+            "scan_type":          1,
+            "forceRefresh":       force_refresh,
+            "utcOffsetInMinutes": utc_offset_minutes,
+        }
+        try:
+            async with self._session.post(
+                f"{BASE_URL}/nuvola/scan/full",
+                json=payload,
+                headers=self._auth_headers(),
+            ) as resp:
+                if resp.status == 401:
+                    raise RainVisionAuthError("Token invalid or expired")
+                if resp.status != 200:
+                    raise RainVisionApiError(f"Unexpected HTTP {resp.status} on /nuvola/scan/full")
+                data = await resp.json()
+                return data.get("peers", [])
+        except aiohttp.ClientError as err:
+            raise RainVisionApiError(f"Connection error: {err}") from err
 
     async def manual_start_zone(
         self,
@@ -476,13 +537,31 @@ class RainVisionApi:
             RainVisionAuthError: On HTTP 401.
             RainVisionApiError:  On network errors.
         """
-        # Strip read-only fields the write endpoint does not accept
+        # Strip read-only fields the write endpoint does not accept.
+        # Also normalise time strings: programs E-H may have JS date strings
+        # like "Sat May 30 2026 00:00:00 GMT+0200" instead of "HH:MM".
+        import re as _re
+        _hhmm = _re.compile(r'^\d{2}:\d{2}$')
+
+        def _normalise_time(raw: str) -> str:
+            if raw and _hhmm.match(raw):
+                return raw
+            return "00:00"
+
+        # Only send programs A-D; E-H are not yet supported
+        supported = {"A", "B", "C", "D"}
         clean = []
         for prog in programs:
+            if prog.get("name") not in supported:
+                continue
             clean.append({
                 "name":     prog["name"],
                 "times":    [
-                    {"time": t.get("time"), "active": t.get("active", False), "hidden": t.get("hidden", False)}
+                    {
+                        "time":   _normalise_time(t.get("time", "00:00")),
+                        "active": t.get("active", False),
+                        "hidden": t.get("hidden", False),
+                    }
                     for t in prog.get("times", [])
                 ],
                 "zones":    [
@@ -496,10 +575,16 @@ class RainVisionApi:
                 "calendar": prog.get("calendar"),
                 "active":   prog.get("active", True),
             })
+        # Compute UTC offset in minutes from local timezone
+        import datetime as _dt
+        tz_offset_minutes = int(_dt.datetime.now().astimezone().utcoffset().total_seconds() / 60)
+
         payload = {
             "device_puid": device_puid,
             "programs":    clean,
             "overlapping": {"isSafe": True},
+            "budget":      1,
+            "tzOffset":    tz_offset_minutes,
         }
         try:
             async with self._session.post(
