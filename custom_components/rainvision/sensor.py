@@ -89,10 +89,21 @@ async def async_setup_entry(
                     RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
                 )
 
-    # Sensor-type devices discovered via nuvola/scan/full (e.g. ACQUA VISION)
-    for device_id in coordinator.sensors:
-        entities.append(RainVisionAcquaBatterySensor(coordinator, device_id))
-        entities.append(RainVisionAcquaRSSISensor(coordinator, device_id))
+    # Generic BLE peer sensors for all devices found via nuvola/scan/full.
+    # Covers sensor-type devices (Acqua Vision) not in GetPlaces,
+    # as well as any paired irrigation device for cross-checking.
+    # Skip devices already covered by the main device sensors above.
+    known_device_ids = set(coordinator.devices.keys())
+    for device_id, peer in coordinator.scan_peers.items():
+        dt = peer.get("devicetype") or {}
+        # Only create generic sensors for sensor-type devices (is_sensor=1)
+        # Pure Vision RSSI is handled by RainVisionDeviceRSSISensor above
+        if dt.get("is_sensor"):
+            entities.append(RainVisionBLEPeerBatterySensor(coordinator, device_id))
+            entities.append(RainVisionBLEPeerRSSISensor(coordinator, device_id))
+        elif device_id not in known_device_ids:
+            # Unknown BLE device — add RSSI only
+            entities.append(RainVisionBLEPeerRSSISensor(coordinator, device_id))
 
     async_add_entities(entities)
 
@@ -794,7 +805,7 @@ class RainVisionDeviceRSSISensor(CoordinatorEntity, SensorEntity):
     @property
     def _peer(self) -> dict:
         """Return the scan peer dict for this device, or {}."""
-        return self.coordinator.scan.get(self._device_id, {})
+        return self.coordinator.scan_peers.get(self._device_id, {})
 
     @property
     def name(self) -> str:
@@ -824,13 +835,16 @@ class RainVisionDeviceRSSISensor(CoordinatorEntity, SensorEntity):
         return _device_info(self._device, self._cloud)
 
 
-# ── ACQUA VISION sensor entities ─────────────────────────────────────────────
+# ── Generic BLE peer sensors (for all devices found via nuvola/scan/full) ────
+# Created for every device in coordinator.scan_peers, covering Pure Vision,
+# Acqua Vision, and any future Rain Vision BLE device visible to the Nuvola hub.
 
-class RainVisionAcquaBatterySensor(CoordinatorEntity, SensorEntity):
-    """Battery level sensor for an ACQUA VISION water sensor.
+class RainVisionBLEPeerBatterySensor(CoordinatorEntity, SensorEntity):
+    """Battery sensor for any BLE peer device discovered via nuvola/scan/full.
 
-    ACQUA VISION is a BLE water/flow sensor managed by the Nuvola hub.
-    Its data is discovered via the nuvola/scan/full endpoint.
+    Created for devices found in the scan that are NOT already covered by
+    the main device battery sensor (i.e. sensor-type devices like Acqua Vision).
+    The battery value from the scan may be more up-to-date than GetPlaces.
 
     State: integer battery percentage (0-100).
     """
@@ -842,45 +856,49 @@ class RainVisionAcquaBatterySensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: RainVisionCoordinator, device_id: int) -> None:
         super().__init__(coordinator)
         self._device_id      = device_id
-        self._attr_unique_id = f"sensor_{device_id}_battery"
+        self._attr_unique_id = f"ble_peer_{device_id}_battery"
 
     @property
-    def _sensor_device(self) -> dict:
-        return self.coordinator.sensors.get(self._device_id, {})
+    def _peer(self) -> dict:
+        return self.coordinator.scan_peers.get(self._device_id, {})
 
     @property
     def _cloud(self) -> dict:
-        return self.coordinator.clouds.get(self._sensor_device.get("_cloud_id"), {})
+        return self.coordinator.clouds.get(self._peer.get("cloud_id"), {})
 
     @property
     def name(self) -> str:
-        return f"{self._sensor_device.get('name', 'Acqua Vision')} Battery"
+        dev = self._peer.get("device") or {}
+        return f"{dev.get('name', f'BLE Device {self._device_id}')} Battery"
 
     @property
     def native_value(self) -> int | None:
-        return self._sensor_device.get("battery")
+        return self._peer.get("battery")
 
     @property
     def device_info(self) -> DeviceInfo:
-        d = self._sensor_device
+        peer = self._peer
+        dev  = peer.get("device") or {}
+        dt   = peer.get("devicetype") or {}
         return DeviceInfo(
-            identifiers={(DOMAIN, f"sensor_device_{self._device_id}")},
-            name=d.get("name", f"Acqua Vision {self._device_id}"),
+            identifiers={(DOMAIN, f"ble_peer_{self._device_id}")},
+            name=dev.get("name", f"BLE Device {self._device_id}"),
             manufacturer=MANUFACTURER,
-            model=d.get("devicetype", {}).get("name", "ACQUA VISION"),
-            sw_version=d.get("_fw"),
-            via_device=(DOMAIN, f"cloud_{d.get('_cloud_id')}"),
+            model=dt.get("name", "Rain Vision Device"),
+            sw_version=peer.get("fw"),
+            via_device=(DOMAIN, f"cloud_{peer.get('cloud_id')}"),
         )
 
 
-class RainVisionAcquaRSSISensor(CoordinatorEntity, SensorEntity):
-    """BLE RSSI sensor for an ACQUA VISION water sensor.
+class RainVisionBLEPeerRSSISensor(CoordinatorEntity, SensorEntity):
+    """BLE RSSI sensor for any device discovered via nuvola/scan/full.
 
-    Reads the rssi field from the nuvola/scan/full peer entry.
-    Higher values indicate a stronger BLE signal to the Nuvola hub.
+    Provides the BLE signal strength between the Nuvola hub and the device.
+    Created for ALL scan peers — Pure Vision, Acqua Vision, and any other
+    BLE device in range of the hub.
 
-    State: integer RSSI value in dBm.
-    Extra attributes: paired, fw, mdata.
+    State: integer RSSI value in dBm (e.g. 88). Higher = stronger signal.
+    Extra attributes: paired, fw, mdata, device_name, device_type.
     """
 
     _attr_icon                       = "mdi:bluetooth-audio"
@@ -890,40 +908,47 @@ class RainVisionAcquaRSSISensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: RainVisionCoordinator, device_id: int) -> None:
         super().__init__(coordinator)
         self._device_id      = device_id
-        self._attr_unique_id = f"sensor_{device_id}_rssi"
+        self._attr_unique_id = f"ble_peer_{device_id}_rssi"
 
     @property
-    def _sensor_device(self) -> dict:
-        return self.coordinator.sensors.get(self._device_id, {})
+    def _peer(self) -> dict:
+        return self.coordinator.scan_peers.get(self._device_id, {})
 
     @property
     def name(self) -> str:
-        return f"{self._sensor_device.get('name', 'Acqua Vision')} BLE RSSI"
+        dev = self._peer.get("device") or {}
+        return f"{dev.get('name', f'BLE Device {self._device_id}')} BLE RSSI"
 
     @property
     def native_value(self) -> int | None:
-        return self._sensor_device.get("_rssi")
+        return self._peer.get("rssi")
 
     @property
     def extra_state_attributes(self) -> dict:
-        d = self._sensor_device
+        peer = self._peer
+        dev  = peer.get("device") or {}
+        dt   = peer.get("devicetype") or {}
         return {
-            "description": "BLE signal strength between Nuvola hub and ACQUA VISION sensor",
+            "description": "BLE signal strength between Nuvola hub and device",
             "source_api":  "nuvola/scan/full",
-            "paired":      d.get("_paired"),
-            "fw":          d.get("_fw"),
-            "mdata":       d.get("_mdata"),
-            "puid":        d.get("puid"),
+            "device_name": dev.get("name"),
+            "device_type": dt.get("name"),
+            "puid":        dev.get("puid"),
+            "paired":      peer.get("paired"),
+            "fw":          peer.get("fw"),
+            "mdata":       peer.get("mdata"),
         }
 
     @property
     def device_info(self) -> DeviceInfo:
-        d = self._sensor_device
+        peer = self._peer
+        dev  = peer.get("device") or {}
+        dt   = peer.get("devicetype") or {}
         return DeviceInfo(
-            identifiers={(DOMAIN, f"sensor_device_{self._device_id}")},
-            name=d.get("name", f"Acqua Vision {self._device_id}"),
+            identifiers={(DOMAIN, f"ble_peer_{self._device_id}")},
+            name=dev.get("name", f"BLE Device {self._device_id}"),
             manufacturer=MANUFACTURER,
-            model=d.get("devicetype", {}).get("name", "ACQUA VISION"),
-            sw_version=d.get("_fw"),
-            via_device=(DOMAIN, f"cloud_{d.get('_cloud_id')}"),
+            model=dt.get("name", "Rain Vision Device"),
+            sw_version=peer.get("fw"),
+            via_device=(DOMAIN, f"cloud_{peer.get('cloud_id')}"),
         )

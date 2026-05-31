@@ -60,8 +60,8 @@ class RainVisionCoordinator(DataUpdateCoordinator):
         self.devices:  dict[int, dict]  = {}
         self.programs: dict[int, list]  = {}
         self.realtime: dict[int, dict]  = {}
-        self.scan:     dict[int, dict]  = {}   # device_id -> peer dict from nuvola/scan/full
-        self.sensors:  dict[int, dict]  = {}   # device_id -> sensor device dict (ACQUA VISION etc.)
+        self.scan_peers: dict[int, dict] = {}   # device_id -> peer dict from nuvola/scan/full
+                                                   # covers ALL BLE devices (Pure Vision, Acqua Vision, etc.)
 
     async def _async_update_data(self) -> dict:
         """Fetch all Rain Vision data from the API.
