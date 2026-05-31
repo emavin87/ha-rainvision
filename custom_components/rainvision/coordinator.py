@@ -134,6 +134,33 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                 )
                 self.realtime.setdefault(device_id, {})
 
+        # ── Step 2b: nuvola/scan/full (RSSI + BLE peers) ─────────────────────
+        for cloud_id, cloud in self.clouds.items():
+            cloud_puid = cloud.get("puid")
+            if not cloud_puid:
+                continue
+            try:
+                import datetime as _dt
+                tz_offset = int(_dt.datetime.now().astimezone().utcoffset().total_seconds() / 60)
+                peers = await self.api.get_nuvola_scan(cloud_puid, utc_offset_minutes=tz_offset)
+                for peer in peers:
+                    dev_obj = peer.get("device") or {}
+                    dev_id  = dev_obj.get("id")
+                    if not dev_id:
+                        continue
+                    self.scan_peers[dev_id] = {
+                        "rssi":       peer.get("rssi"),
+                        "battery":    peer.get("battery"),
+                        "fw":         peer.get("fw"),
+                        "paired":     peer.get("paired"),
+                        "mdata":      peer.get("mdata"),
+                        "cloud_id":   cloud_id,
+                        "device":     dev_obj,
+                        "devicetype": peer.get("devicetype") or {},
+                    }
+            except (RainVisionApiError, RainVisionAuthError) as err:
+                _LOGGER.warning("Could not fetch BLE scan for cloud %s: %s", cloud_id, err)
+
         # ── Step 3: GetDeviceProgramList ──────────────────────────────────────
         for device_id, device in self.devices.items():
             puid = device.get("puid")
