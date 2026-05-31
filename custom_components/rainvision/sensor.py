@@ -89,23 +89,30 @@ async def async_setup_entry(
                     RainVisionProgramDetailSensor(coordinator, cloud_id, device_id, letter, label)
                 )
 
-    # Generic BLE peer sensors for all devices found via nuvola/scan/full.
-    # Covers sensor-type devices (Acqua Vision) not in GetPlaces,
-    # as well as any paired irrigation device for cross-checking.
-    # Skip devices already covered by the main device sensors above.
-    known_device_ids = set(coordinator.devices.keys())
-    for device_id, peer in coordinator.scan_peers.items():
-        dt = peer.get("devicetype") or {}
-        # Only create generic sensors for sensor-type devices (is_sensor=1)
-        # Pure Vision RSSI is handled by RainVisionDeviceRSSISensor above
-        if dt.get("is_sensor"):
-            entities.append(RainVisionBLEPeerBatterySensor(coordinator, device_id))
-            entities.append(RainVisionBLEPeerRSSISensor(coordinator, device_id))
-        elif device_id not in known_device_ids:
-            # Unknown BLE device — add RSSI only
-            entities.append(RainVisionBLEPeerRSSISensor(coordinator, device_id))
-
     async_add_entities(entities)
+
+    # BLE peer sensors added dynamically after each coordinator update
+    # because scan_peers is populated during the poll cycle, not at startup.
+    registered_ble_ids: set = set()
+
+    def _add_ble_peer_sensors() -> None:
+        known = set(coordinator.devices.keys())
+        new_ents = []
+        for dev_id, peer in coordinator.scan_peers.items():
+            if dev_id in registered_ble_ids:
+                continue
+            dt = peer.get("devicetype") or {}
+            if dt.get("is_sensor"):
+                new_ents.append(RainVisionBLEPeerBatterySensor(coordinator, dev_id))
+                new_ents.append(RainVisionBLEPeerRSSISensor(coordinator, dev_id))
+            elif dev_id not in known:
+                new_ents.append(RainVisionBLEPeerRSSISensor(coordinator, dev_id))
+            registered_ble_ids.add(dev_id)
+        if new_ents:
+            async_add_entities(new_ents)
+
+    _add_ble_peer_sensors()
+    coordinator.async_add_listener(_add_ble_peer_sensors)
 
 
 # ── Device info helpers ───────────────────────────────────────────────────────
