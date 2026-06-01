@@ -47,16 +47,14 @@ _PROG_BASE = {
 }
 
 SCHEMA_MANUAL_START = vol.Schema({
-    vol.Required("cloud_id"):                                vol.Coerce(int),
-    vol.Required("device_id"):                               vol.Coerce(int),
-    vol.Required("zone"):                                    vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
+    vol.Required("device_puid"):                              str,
+    vol.Required("zone_progressive"):                         vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
     vol.Optional("duration_minutes", default=DEFAULT_MANUAL_DURATION):
                                                              vol.All(vol.Coerce(int), vol.Range(min=1, max=120)),
 })
 
 SCHEMA_MANUAL_STOP = vol.Schema({
-    vol.Required("cloud_id"):  vol.Coerce(int),
-    vol.Required("device_id"): vol.Coerce(int),
+    vol.Required("device_puid"): str,
 })
 
 SCHEMA_SET_ZONE_DURATION = vol.Schema({
@@ -154,16 +152,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Example:
           service: rainvision.manual_start
           data:
-            cloud_id: 1099
-            device_id: 5644
-            zone: 1
+            device_puid: "1000005059"
+            zone_progressive: 1
             duration_minutes: 10
         """
         await _call(
             api.manual_start_zone(
-                call.data["cloud_id"],
-                call.data["device_id"],
-                call.data["zone"],
+                call.data["device_puid"],
+                call.data["zone_progressive"],
                 call.data["duration_minutes"],
             ),
             SVC_MANUAL_START,
@@ -175,11 +171,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Example:
           service: rainvision.manual_stop
           data:
-            cloud_id: 1099
-            device_id: 5644
+            device_puid: "1000005059"
         """
         await _call(
-            api.manual_stop(call.data["cloud_id"], call.data["device_id"]),
+            api.manual_stop(call.data["device_puid"]),
             SVC_MANUAL_STOP,
         )
 

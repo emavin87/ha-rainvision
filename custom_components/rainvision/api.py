@@ -447,73 +447,139 @@ class RainVisionApi:
 
     async def manual_start_zone(
         self,
-        cloud_id: int,
-        device_id: int,
-        zone: int,
+        device_puid: str,
+        zone_progressive: int,
         duration_minutes: int = 10,
     ) -> bool:
         """Start manual irrigation on a specific zone.
 
-        Calls POST /api/v5/ManualStart. The command is routed through the
-        Nuvola hub to the Pure Vision device.
+        Calls POST /api/v5/nuvola/device/write with commandName=StartManualMode.
+        Confirmed payload structure from live HAR capture:
+        {
+          "device_puid": "1000005059",
+          "utcOffsetInMinutes": 120,
+          "SaveManualStatus": true,
+          "cancel": "ManualMode",
+          "commandName": "StartManualMode",
+          "manualZone": 4,              <- zone progressive index (1-4, not bitmask)
+          "commands": [
+            {"service": "F000", "characteristic": "F001", "values": ["06"]},
+            {"service": "E000", "characteristic": "E005", "values": ["<hex>"]},
+            {"service": "F000", "characteristic": "F001", "values": ["05"]}
+          ]
+        }
+
+        The hex string in commands[1].values[0] encodes the zone and duration:
+        - Byte 7 (offset 14): duration in seconds (e.g. 0x78 = 120 = 2 min)
+        - Duration formula confirmed: duration_seconds = duration_minutes * 60
+        - For durations > 255 seconds (> ~4 min): uses 2-byte little-endian
+          at bytes 7-8. TODO: confirm with >4 min capture.
 
         Args:
-            cloud_id:         ID of the parent Nuvola hub.
-            device_id:        ID of the Pure Vision device.
-            zone:             Zone number (1-based).
+            device_puid:      Pure Vision puid string (e.g. '1000005059').
+            zone_progressive: Zone progressive index (1=Zone1, 2=Zone2, 3=Zone3, 4=Zone4).
             duration_minutes: Irrigation duration in minutes (default 10).
 
         Returns:
-            True if the API accepted the command (HTTP 200).
+            True if the API accepted the command (success=true in response).
 
         Raises:
             RainVisionAuthError: On HTTP 401.
             RainVisionApiError:  On network errors.
         """
+        import datetime as _dt
+        tz_offset = int(_dt.datetime.now().astimezone().utcoffset().total_seconds() / 60)
+
+        # Build the hex command string encoding duration.
+        # 128 bytes total = 256 hex chars.
+        # Bytes 6-7 encode duration in seconds as big-endian uint16:
+        # confirmed from live captures:
+        #   2 min  = 120  sec = 0x0078 -> "0000000000000078..."
+        #   10 min = 600  sec = 0x0258 -> "0000000000000258..."
+        duration_seconds = duration_minutes * 60
+        dur_hi = (duration_seconds >> 8) & 0xFF
+        dur_lo = duration_seconds & 0xFF
+        hex_cmd = (
+            "000000000000"           # bytes 0-5: zeros
+            + f"{dur_hi:02x}"        # byte 6: duration high byte
+            + f"{dur_lo:02x}"        # byte 7: duration low byte
+            + "00" * 56              # bytes 8-63: zeros
+        )
+
         payload = {
-            "cloud_id":  cloud_id,
-            "device_id": device_id,
-            "zone":      zone,
-            "duration":  duration_minutes,
+            "device_puid":        device_puid,
+            "utcOffsetInMinutes": tz_offset,
+            "SaveManualStatus":   True,
+            "cancel":             "ManualMode",
+            "commandName":        "StartManualMode",
+            "manualZone":         zone_progressive,
+            "commands": [
+                {"service": "F000", "characteristic": "F001", "values": ["06"]},
+                {"service": "E000", "characteristic": "E005", "values": [hex_cmd]},
+                {"service": "F000", "characteristic": "F001", "values": ["05"]},
+            ],
         }
         try:
             async with self._session.post(
-                f"{BASE_URL}/ManualStart",
+                f"{BASE_URL}/nuvola/device/write",
                 json=payload,
                 headers=self._auth_headers(),
             ) as resp:
                 if resp.status == 401:
                     raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
+                if resp.status != 200:
+                    raise RainVisionApiError(f"Unexpected HTTP {resp.status} on /nuvola/device/write")
+                data = await resp.json()
+                return bool(data.get("success"))
         except aiohttp.ClientError as err:
             raise RainVisionApiError(f"Connection error: {err}") from err
 
-    async def manual_stop(self, cloud_id: int, device_id: int) -> bool:
+    async def manual_stop(self, device_puid: str) -> bool:
         """Stop all manual irrigation on a device.
 
-        Calls POST /api/v5/ManualStop. Stops every manually running zone
-        on the device immediately.
+        Calls POST /api/v5/nuvola/device/write with commandName=StopManualMode.
+        Confirmed payload from live HAR capture:
+        {
+          "device_puid": "1000005059",
+          "utcOffsetInMinutes": 120,
+          "cancel": "ManualMode",
+          "commandName": "StopManualMode",
+          "commands": [{"service": "F000", "characteristic": "F001", "values": ["06", "04"]}]
+        }
 
         Args:
-            cloud_id:  ID of the parent Nuvola hub.
-            device_id: ID of the Pure Vision device.
+            device_puid: Pure Vision puid string (e.g. '1000005059').
 
         Returns:
-            True if the API accepted the command (HTTP 200).
+            True if the API accepted the command (success=true in response).
 
         Raises:
             RainVisionAuthError: On HTTP 401.
             RainVisionApiError:  On network errors.
         """
+        import datetime as _dt
+        tz_offset = int(_dt.datetime.now().astimezone().utcoffset().total_seconds() / 60)
+        payload = {
+            "device_puid":        device_puid,
+            "utcOffsetInMinutes": tz_offset,
+            "cancel":             "ManualMode",
+            "commandName":        "StopManualMode",
+            "commands": [
+                {"service": "F000", "characteristic": "F001", "values": ["06", "04"]}
+            ],
+        }
         try:
             async with self._session.post(
-                f"{BASE_URL}/ManualStop",
-                json={"cloud_id": cloud_id, "device_id": device_id},
+                f"{BASE_URL}/nuvola/device/write",
+                json=payload,
                 headers=self._auth_headers(),
             ) as resp:
                 if resp.status == 401:
                     raise RainVisionAuthError("Token invalid or expired")
-                return resp.status == 200
+                if resp.status != 200:
+                    raise RainVisionApiError(f"Unexpected HTTP {resp.status} on /nuvola/device/write")
+                data = await resp.json()
+                return bool(data.get("success"))
         except aiohttp.ClientError as err:
             raise RainVisionApiError(f"Connection error: {err}") from err
 

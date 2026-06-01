@@ -704,5 +704,4 @@ cards:
               action: call-service
               service: rainvision.manual_stop
               service_data:
-                cloud_id: 1099
-                device_id: 5644
+                device_puid: "1000005059"
