@@ -202,9 +202,9 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                 self.programs.setdefault(device_id, [])
 
         # Record the UTC timestamp of this successful poll cycle.
-        # Exposed as an attribute on sensors so users can see when data was last refreshed.
+        # Stored as a datetime object so HA renders it correctly as a timestamp.
         from datetime import datetime, timezone
-        self.last_poll_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.last_poll_at = datetime.now(timezone.utc)
 
         return {
             "places":   self.places,
