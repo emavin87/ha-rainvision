@@ -1,27 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="271" height="140.288" viewBox="0 0 271 140.288">
-  <defs>
-    <clipPath id="clip-path">
-      <rect id="Rettangolo_2" data-name="Rettangolo 2" width="251.17" height="130.023" fill="none"/>
-    </clipPath>
-    <clipPath id="clip-path-2">
-      <rect id="Rettangolo_3" data-name="Rettangolo 3" width="271" height="140.286" fill="none"/>
-    </clipPath>
-  </defs>
-  <g id="Raggruppa_1" data-name="Raggruppa 1" style="mix-blend-mode: normal;isolation: isolate">
-    <path id="Tracciato_1" data-name="Tracciato 1" d="M152.706,121.654,189.272,50.34h36.567l-36.567,71.314Z" transform="translate(25.332 8.351)" fill="#9cb600"/>
-    <path id="Tracciato_2" data-name="Tracciato 2" d="M168.388,3.576h36.566L223.237,53.94H186.671Z" transform="translate(27.933 0.593)" fill="#3fb5d0"/>
-    <g id="Raggruppa_2" data-name="Raggruppa 2" transform="translate(0 0)">
-      <g id="Raggruppa_1-2" data-name="Raggruppa 1" clip-path="url(#clip-path)">
-        <path id="Tracciato_3" data-name="Tracciato 3" d="M106.958,124.205a20.953,20.953,0,0,1-14.628-5.971,18.253,18.253,0,0,1-5.822-12.716,24.23,24.23,0,0,1,4.376-13.944C93.5,87.6,97.033,83.95,100.4,79.759a41.878,41.878,0,0,0,6.637-13.481,39.813,39.813,0,0,0,6.487,13.486c3.357,4.186,6.9,7.831,9.5,11.81a24.181,24.181,0,0,1,4.385,13.944,18.257,18.257,0,0,1-5.826,12.716,20.933,20.933,0,0,1-14.624,5.971m-1.888-114.2V56.335c-.033.2-.132.941-.357,2.093-.764,4.095-3.05,13.158-7.555,18.736-3.182,3.991-6.82,7.7-9.742,12.126a28.5,28.5,0,0,0-5.062,16.228c.069,11.476,10.6,22.777,24.6,22.844,14-.068,24.536-11.369,24.6-22.844A28.481,28.481,0,0,0,126.5,89.29c-2.924-4.422-6.564-8.136-9.744-12.126-2.976-3.7-4.936-8.954-6.065-13.26-.574-2.151-.946-4.064-1.171-5.433-.177-.992-.266-1.681-.293-1.975V10.009H105.07" transform="translate(13.661 1.66)" fill="#3fb5d0"/>
-        <rect id="Rettangolo_1" data-name="Rettangolo 1" width="4.158" height="4.151" transform="translate(118.732 0.001)" fill="#3fb5d0"/>
-      </g>
-    </g>
-    <g id="Raggruppa_4" data-name="Raggruppa 4" transform="translate(0 0.001)">
-      <g id="Raggruppa_3" data-name="Raggruppa 3" clip-path="url(#clip-path-2)">
-        <path id="Tracciato_4" data-name="Tracciato 4" d="M53.87,58.25A25.861,25.861,0,1,1,72.16,65.826,25.8,25.8,0,0,1,53.87,58.25M42.152,39.967A30.01,30.01,0,0,0,98.9,53.589V69.915h4.16v-59.9H98.9V26.344A30.01,30.01,0,0,0,42.152,39.967" transform="translate(6.992 1.651)" fill="#9cb600"/>
-        <path id="Tracciato_5" data-name="Tracciato 5" d="M23.285,9.306a21.881,21.881,0,0,0-12.773,3.736,22.19,22.19,0,0,0-6.355,6.986v-9.9H0v59.9H4.156V33.04l.052.015s.022-.26.087-.8a27.905,27.905,0,0,1,3.965-10.98c2.826-4.2,7.134-7.767,15.024-7.82,7.106.031,11.847,2.647,15,6.345a20.542,20.542,0,0,1,4.632,13.1h4.152a24.646,24.646,0,0,0-5.61-15.778c-3.87-4.594-9.958-7.816-18.1-7.816Z" transform="translate(0 1.543)" fill="#9cb600"/>
-        <path id="Tracciato_6" data-name="Tracciato 6" d="M135.607,9.306a21.017,21.017,0,0,0-18.93,10.407V10.126h-4.158v59.9h4.158V31.953A27.548,27.548,0,0,1,120.6,21.276c2.825-4.2,7.127-7.767,15.012-7.813,7.12.024,11.849,2.64,15.01,6.337a20.546,20.546,0,0,1,4.625,13.1V70.025h4.13V32.145a24.565,24.565,0,0,0-5.59-15.022c-3.855-4.594-9.951-7.816-18.1-7.816Z" transform="translate(18.665 1.543)" fill="#9cb600"/>
-      </g>
-    </g>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="420" height="120">
+
+  <!-- Icon badge -->
+  <rect x="0" y="10" width="100" height="100" rx="18" fill="#0e4d5c"/>
+
+  <!-- Water drop outline -->
+  <path d="M50 22 C50 22 28 52 28 70 C28 83 38 92 50 92 C62 92 72 83 72 70 C72 52 50 22 50 22 Z"
+        fill="none" stroke="#7ecfde" stroke-width="3.5" stroke-linejoin="round"/>
+
+  <!-- Fill lower half of drop -->
+  <path d="M50 62 C50 62 34 69 34 78 C34 86 41 91 50 91 C59 91 66 86 66 78 C66 69 50 62 50 62 Z"
+        fill="#3fb5d0" opacity="0.5"/>
+
+  <!-- Droplets above -->
+  <circle cx="37" cy="17" r="3.5" fill="#7ecfde"/>
+  <circle cx="44" cy="11" r="3.5" fill="#7ecfde"/>
+  <circle cx="50" cy="9"  r="3.5" fill="#7ecfde"/>
+  <circle cx="56" cy="11" r="3.5" fill="#7ecfde"/>
+  <circle cx="63" cy="17" r="3.5" fill="#7ecfde"/>
+
+  <!-- Text: Rain Vision -->
+  <text x="118" y="52"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="34" font-weight="600"
+        fill="#0e4d5c">Rain Vision</text>
+
+  <!-- Text: for Home Assistant -->
+  <text x="120" y="78"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16" font-weight="400"
+        fill="#3fb5d0">for Home Assistant</text>
+
 </svg>

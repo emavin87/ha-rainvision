@@ -1,0 +1,114 @@
+type: vertical-stack
+cards:
+
+  # ── Header ───────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    entity: sensor.nuvola_vision_ev_meteo
+    show_state: true
+    show_name: true
+    show_label: true
+    name: "Meteo attuale"
+    label: >
+      [[[ return (entity.attributes.description ?? '').toUpperCase() ]]]
+    icon: mdi:weather-partly-cloudy
+    styles:
+      card:
+        - background: "linear-gradient(135deg, #0277bd, #00b5e2)"
+        - border-radius: "12px 12px 0 0"
+        - padding: 16px
+      name:
+        - font-size: 12px
+        - color: "rgba(255,255,255,0.7)"
+      state:
+        - font-size: 32px
+        - font-weight: bold
+        - color: white
+      label:
+        - font-size: 11px
+        - color: "rgba(255,255,255,0.8)"
+        - letter-spacing: "0.05em"
+      icon:
+        - color: white
+        - width: 40px
+
+  # ── Temperatura ──────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    entity: sensor.nuvola_vision_ev_meteo
+    show_state: false
+    show_name: false
+    show_label: true
+    label: >
+      [[[
+        const a = entity.attributes;
+        return `🌡️  ${a.temp ?? '—'} °C   ·   min ${a.temp_min ?? '—'} °C   ·   max ${a.temp_max ?? '—'} °C   ·   percepita ${a.feels_like ?? '—'} °C`;
+      ]]]
+    icon: mdi:thermometer
+    styles:
+      card:
+        - background: "#01579b"
+        - border-radius: 0
+        - padding: 10px 16px
+        - margin-top: "1px"
+      label:
+        - color: white
+        - font-size: 13px
+        - text-align: left
+        - flex-grow: 1
+      icon:
+        - color: "rgba(255,255,255,0.6)"
+        - width: 20px
+
+  # ── Atmosfera ────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    entity: sensor.nuvola_vision_ev_meteo
+    show_state: false
+    show_name: false
+    show_label: true
+    label: >
+      [[[
+        const a = entity.attributes;
+        return `💧  Umidità ${a.humidity ?? '—'} %   ·   Pressione ${a.pressure ?? '—'} hPa   ·   Visibilità ${a.visibility ?? '—'} m   ·   Nuvolosità ${a.clouds ?? '—'} %`;
+      ]]]
+    icon: mdi:water-percent
+    styles:
+      card:
+        - background: "#0277bd"
+        - border-radius: 0
+        - padding: 10px 16px
+        - margin-top: "1px"
+      label:
+        - color: white
+        - font-size: 13px
+        - text-align: left
+        - flex-grow: 1
+      icon:
+        - color: "rgba(255,255,255,0.6)"
+        - width: 20px
+
+  # ── Vento ────────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    entity: sensor.nuvola_vision_ev_meteo
+    show_state: false
+    show_name: false
+    show_label: true
+    label: >
+      [[[
+        const a = entity.attributes;
+        const gust = a.wind_gust ? `  ·   Raffiche ${a.wind_gust} m/s` : '';
+        return `💨  Velocità ${a.wind_speed ?? '—'} m/s   ·   Direzione ${a.wind_deg ?? '—'} °${gust}`;
+      ]]]
+    icon: mdi:weather-windy
+    styles:
+      card:
+        - background: "#0288d1"
+        - border-radius: "0 0 12px 12px"
+        - padding: 10px 16px
+        - margin-top: "1px"
+      label:
+        - color: white
+        - font-size: 13px
+        - text-align: left
+        - flex-grow: 1
+      icon:
+        - color: "rgba(255,255,255,0.6)"
+        - width: 20px

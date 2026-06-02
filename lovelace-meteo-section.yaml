@@ -1,0 +1,133 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rain Vision — Weather Section
+#
+# Displays current weather conditions from the Nuvola hub location.
+# Data source: device.cloud.meteo from nuvola/device API.
+#
+# Requires: custom:button-card (HACS → Frontend)
+# Entity:   sensor.nuvola_vision_ev_meteo
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: 🌤️ Meteo
+type: grid
+cards:
+
+  # ── Header with current condition ────────────────────────────────────────────
+  - type: custom:button-card
+    entity: sensor.nuvola_vision_ev_meteo
+    show_state: true
+    show_label: true
+    show_name: true
+    name: "Meteo attuale"
+    label: >
+      [[[
+        const attrs = entity.attributes;
+        return attrs.description ?? '';
+      ]]]
+    icon: mdi:weather-partly-cloudy
+    styles:
+      card:
+        - background: "linear-gradient(135deg, #0277bd, #00b5e2)"
+        - color: white
+        - font-size: 15px
+        - font-weight: bold
+        - padding: 16px
+        - border-radius: 12px
+      name:
+        - font-size: 13px
+        - color: "rgba(255,255,255,0.8)"
+      state:
+        - font-size: 28px
+        - font-weight: bold
+        - color: white
+      label:
+        - font-size: 13px
+        - color: "rgba(255,255,255,0.9)"
+        - text-transform: capitalize
+      icon:
+        - color: white
+        - width: 36px
+
+  # ── Temperature grid ──────────────────────────────────────────────────────────
+  - type: entities
+    title: "🌡️ Temperatura"
+    show_header_toggle: false
+    entities:
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: temp
+        name: "Temperatura attuale"
+        icon: mdi:thermometer
+        suffix: " °C"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: feels_like
+        name: "Percepita"
+        icon: mdi:thermometer-lines
+        suffix: " °C"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: temp_min
+        name: "Minima"
+        icon: mdi:thermometer-chevron-down
+        suffix: " °C"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: temp_max
+        name: "Massima"
+        icon: mdi:thermometer-chevron-up
+        suffix: " °C"
+
+  # ── Atmosphere ────────────────────────────────────────────────────────────────
+  - type: entities
+    title: "💧 Atmosfera"
+    show_header_toggle: false
+    entities:
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: humidity
+        name: "Umidità"
+        icon: mdi:water-percent
+        suffix: " %"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: pressure
+        name: "Pressione"
+        icon: mdi:gauge
+        suffix: " hPa"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: visibility
+        name: "Visibilità"
+        icon: mdi:eye-outline
+        suffix: " m"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: clouds
+        name: "Nuvolosità"
+        icon: mdi:cloud-percent
+        suffix: " %"
+
+  # ── Wind ─────────────────────────────────────────────────────────────────────
+  - type: entities
+    title: "💨 Vento"
+    show_header_toggle: false
+    entities:
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: wind_speed
+        name: "Velocità"
+        icon: mdi:weather-windy
+        suffix: " m/s"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: wind_deg
+        name: "Direzione"
+        icon: mdi:compass-outline
+        suffix: " °"
+      - type: attribute
+        entity: sensor.nuvola_vision_ev_meteo
+        attribute: wind_gust
+        name: "Raffiche"
+        icon: mdi:weather-windy-variant
+        suffix: " m/s"
