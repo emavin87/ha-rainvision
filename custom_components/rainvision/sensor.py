@@ -81,6 +81,7 @@ async def async_setup_entry(
             entities.append(RainVisionRealtimeTimestampSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionDeviceRSSISensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionActiveZoneSensor(coordinator, cloud_id, device_id))
+            entities.append(RainVisionMeteoSensor(coordinator, cloud_id, device_id))
 
             # One sensor per program -- all data exposed as flat attributes
             for prog_info in device.get("fullprogramnames", []):
@@ -1054,3 +1055,87 @@ class RainVisionActiveZoneSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return _device_info(self._device, self._cloud)
+
+
+class RainVisionMeteoSensor(CoordinatorEntity, SensorEntity):
+    """Current weather conditions sensor for the Nuvola hub location.
+
+    Reads the 'meteo' object nested inside device.cloud from the
+    nuvola/device real-time response. Provides current weather data
+    (temperature, humidity, wind, etc.) as a single sensor with all
+    fields exposed as flat attributes.
+
+    Source: device.cloud.meteo from POST /api/v5/nuvola/device.
+
+    State: current temperature in °C (main_temp).
+    Extra attributes: full meteo object fields.
+    """
+
+    _attr_icon                       = "mdi:weather-partly-cloudy"
+    _attr_native_unit_of_measurement = "°C"
+    _attr_device_class               = SensorDeviceClass.TEMPERATURE
+    _attr_state_class                = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int, device_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._device_id      = device_id
+        self._attr_unique_id = f"device_{device_id}_meteo"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def _meteo(self) -> dict:
+        """Return the meteo dict from the realtime response, or {}."""
+        rt = self.coordinator.realtime.get(self._device_id, {})
+        return (rt.get("device") or {}).get("cloud", {}).get("meteo") or {}
+
+    @property
+    def name(self) -> str:
+        return f"{self._cloud.get('name', 'Nuvola')} Meteo"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return current temperature as the sensor state."""
+        val = self._meteo.get("main_temp")
+        return round(float(val), 1) if val is not None else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        m = self._meteo
+        if not m:
+            return {}
+        return {
+            # Temperature
+            "temp":            m.get("main_temp"),
+            "temp_min":        m.get("main_temp_min"),
+            "temp_max":        m.get("main_temp_max"),
+            "feels_like":      m.get("main_feels_like"),
+            # Atmosphere
+            "humidity":        m.get("main_humidity"),
+            "pressure":        m.get("main_pressure"),
+            "visibility":      m.get("visibility"),
+            # Wind
+            "wind_speed":      m.get("wind_speed"),
+            "wind_deg":        m.get("wind_deg"),
+            "wind_gust":       m.get("wind_gust"),
+            # Sky
+            "clouds":          m.get("clouds_all"),
+            "weather_main":    m.get("weather_main"),
+            "description":     m.get("weather_description"),
+            "icon":            m.get("weather_icon"),
+            "ionic_icon":      m.get("ionic_icon_name"),
+            # Timestamps
+            "dt":              m.get("dt"),
+            "time":            m.get("time"),
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _cloud_info(self._cloud)
