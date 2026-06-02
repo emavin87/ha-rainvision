@@ -1,3 +1,16 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rain Vision — Program A Entity Card (Lawn (Prato))
+#
+# Displays all attributes of Program A grouped in four sections:
+#   - Settings:  type, cycle frequency, active flag, total duration
+#   - Times:     up to 6 start-time slots with active indicator (button-card)
+#   - Zones:     name, duration and active state for all 4 zones (button-card)
+#   - Weekdays:  only shown when schedule type != 'cycle' (conditional block)
+#
+# Requires:  custom:button-card (HACS → Frontend)
+# Entity:    sensor.pure_vision_ev_programma_a_prato
+# ─────────────────────────────────────────────────────────────────────────────
+
 type: vertical-stack
 cards:
 

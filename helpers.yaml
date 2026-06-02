@@ -1,11 +1,23 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Rain Vision — Helper per la card di modifica programmi
-# Il campo "id" forza l'entity_id esatto indipendentemente dal nome
+# Rain Vision — HA Helpers
+#
+# Add the content of this file to configuration.yaml, or include it with:
+#   input_select: !include helpers.yaml
+#   input_number: !include helpers.yaml
+#   input_text:   !include helpers.yaml
+#
+# Alternatively, create each helper manually via:
+#   Settings → Devices & Services → Helpers → + Create helper
+#
+# The YAML key (e.g. rainvision_programma) becomes the entity_id suffix,
+# so input_select.rainvision_programma is guaranteed regardless of the name.
 # ─────────────────────────────────────────────────────────────────────────────
 
 input_select:
+
+  # Program selector — used by the Edit Program section
   rainvision_programma:
-    name: "Rain Vision — Programma"
+    name: "Rain Vision — Program"
     icon: mdi:calendar-clock
     options:
       - "A"
@@ -14,8 +26,9 @@ input_select:
       - "D"
     initial: "A"
 
+  # Zone selector (bitmask IDs: 1=Zone1, 2=Zone2, 4=Zone3, 8=Zone4)
   rainvision_zona:
-    name: "Rain Vision — Zona (ID)"
+    name: "Rain Vision — Zone (ID)"
     icon: mdi:sprinkler
     options:
       - "1"
@@ -24,17 +37,20 @@ input_select:
       - "8"
     initial: "1"
 
+  # Schedule type selector
   rainvision_tipo_ciclo:
-    name: "Rain Vision — Tipo schedulazione"
+    name: "Rain Vision — Schedule type"
     icon: mdi:calendar-sync
     options:
-      - "cycle"
-      - "weekdays"
+      - "cycle"       # Repeat every N hours
+      - "weekdays"    # Run on specific days of the week
     initial: "cycle"
 
 input_number:
+
+  # Zone duration for the Edit Program section (in minutes)
   rainvision_durata_min:
-    name: "Rain Vision — Durata zona (min)"
+    name: "Rain Vision — Zone duration (min)"
     icon: mdi:timer-outline
     min: 0
     max: 120
@@ -42,8 +58,9 @@ input_number:
     unit_of_measurement: "min"
     initial: 10
 
+  # Cycle frequency for the Edit Program section (in hours)
   rainvision_ciclo_ore:
-    name: "Rain Vision — Ciclo (ore)"
+    name: "Rain Vision — Cycle frequency (h)"
     icon: mdi:refresh
     min: 1
     max: 168
@@ -51,8 +68,9 @@ input_number:
     unit_of_measurement: "h"
     initial: 48
 
+  # Start time slot index (0–5) for the Edit Program section
   rainvision_time_index:
-    name: "Rain Vision — Slot orario (0-5)"
+    name: "Rain Vision — Time slot (0–5)"
     icon: mdi:numeric
     min: 0
     max: 5
@@ -60,8 +78,35 @@ input_number:
     initial: 0
 
 input_text:
+
+  # Start time for the Edit Program section (HH:MM format)
   rainvision_orario:
-    name: "Rain Vision — Orario avvio"
+    name: "Rain Vision — Start time"
     icon: mdi:clock-outline
     initial: "06:30"
     pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+
+  # Zone durations for the Manual Irrigation section (in minutes, max 3 chars)
+  rainvision_durata_prato1:
+    name: "Rain Vision — Lawn 1 duration (min)"
+    icon: mdi:sprinkler
+    max: 3
+    initial: "10"
+
+  rainvision_durata_prato2:
+    name: "Rain Vision — Lawn 2 duration (min)"
+    icon: mdi:sprinkler
+    max: 3
+    initial: "10"
+
+  rainvision_durata_piante:
+    name: "Rain Vision — Plants duration (min)"
+    icon: mdi:flower
+    max: 3
+    initial: "10"
+
+  rainvision_durata_orto:
+    name: "Rain Vision — Garden duration (min)"
+    icon: mdi:sprout
+    max: 3
+    initial: "10"

@@ -1,0 +1,132 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rain Vision — Manual Irrigation Section
+#
+# Displays four text inputs to set irrigation duration per zone,
+# then a START button that runs all zones in sequence and a STOP button.
+#
+# Requires:
+#   - custom:button-card (HACS → Frontend)
+#   - script.rainvision_irrigazione_sequenziale (created via HA UI or API)
+#   - input_text helpers (created via HA UI):
+#       input_text.rain_vision_durata_prato_1_min
+#       input_text.rain_vision_durata_prato_2_min
+#       input_text.rain_vision_durata_piante_min
+#       input_text.rain_vision_durata_orto_min
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: 💧 Manual Irrigation
+type: grid
+cards:
+
+  # ── Header ───────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    name: "💧 Manual Irrigation"
+    icon: mdi:water
+    show_state: false
+    styles:
+      card:
+        - background: "linear-gradient(135deg, #00838f, #00b5e2)"
+        - color: white
+        - font-size: 15px
+        - font-weight: bold
+        - padding: 14px
+        - border-radius: 12px
+      icon:
+        - color: white
+        - width: 26px
+
+  # ── Zone duration inputs ──────────────────────────────────────────────────────
+  # User types the desired duration in minutes for each zone.
+  # Zones with value 0 are skipped by the sequential script.
+  - type: entities
+    title: "⏱️ Zone Duration (minutes)"
+    show_header_toggle: false
+    entities:
+      - entity: input_text.rain_vision_durata_prato_1_min
+        name: "Lawn 1"
+        icon: mdi:sprinkler
+      - entity: input_text.rain_vision_durata_prato_2_min
+        name: "Lawn 2"
+        icon: mdi:sprinkler
+      - entity: input_text.rain_vision_durata_piante_min
+        name: "Plants"
+        icon: mdi:flower
+      - entity: input_text.rain_vision_durata_orto_min
+        name: "Garden"
+        icon: mdi:sprout
+
+  # ── START / STOP buttons ──────────────────────────────────────────────────────
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+
+      # START — triggers the sequential irrigation script.
+      # Button turns darker green while the script is running.
+      - type: custom:button-card
+        name: "▶ START"
+        label: "Run sequence"
+        show_label: true
+        show_state: false
+        icon: mdi:play-circle
+        entity: script.rainvision_irrigazione_sequenziale
+        state:
+          - value: "on"
+            name: "Running..."
+            styles:
+              card:
+                - background: "#1b5e20"
+              icon:
+                - color: "#69f0ae"
+          - value: "off"
+            styles:
+              card:
+                - background: "#2d7a3a"
+              icon:
+                - color: white
+        styles:
+          card:
+            - background: "#2d7a3a"
+            - border-radius: 10px
+            - padding: 16px 8px
+          name:
+            - color: white
+            - font-size: 15px
+            - font-weight: bold
+          label:
+            - color: "rgba(255,255,255,0.8)"
+            - font-size: 11px
+          icon:
+            - color: white
+            - width: 28px
+        tap_action:
+          action: call-service
+          service: script.rainvision_irrigazione_sequenziale
+
+      # STOP — immediately stops all manual irrigation.
+      - type: custom:button-card
+        name: "⏹ STOP"
+        label: "Stop all"
+        show_label: true
+        show_state: false
+        icon: mdi:stop-circle
+        styles:
+          card:
+            - background: "#c62828"
+            - border-radius: 10px
+            - padding: 16px 8px
+          name:
+            - color: white
+            - font-size: 15px
+            - font-weight: bold
+          label:
+            - color: "rgba(255,255,255,0.8)"
+            - font-size: 11px
+          icon:
+            - color: white
+            - width: 28px
+        tap_action:
+          action: call-service
+          service: rainvision.manual_stop
+          service_data:
+            device_puid: "1000005059"

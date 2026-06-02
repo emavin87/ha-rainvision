@@ -18,7 +18,7 @@ MODEL_DEVICE = "Pure Vision"
 CONF_TOKEN = "token"
 
 # How often the coordinator polls the Rain Vision API (seconds)
-UPDATE_INTERVAL = 300  # 5 minutes
+UPDATE_INTERVAL = 180  # 3 minutes
 
 # Default duration used when manually starting a zone without specifying one
 DEFAULT_MANUAL_DURATION = 10  # minutes

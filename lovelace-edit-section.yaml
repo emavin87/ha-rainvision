@@ -1,16 +1,29 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Rain Vision — Sezione modifica programma
-# Incolla questo blocco dentro la tua section esistente
-# Richiede: button-card (HACS) e gli helper in helpers.yaml
+# Rain Vision — Edit Program Section
+#
+# Allows the user to modify irrigation program settings directly from the
+# dashboard. Uses input helpers to select values, then dedicated save buttons
+# to write changes via Rain Vision services.
+#
+# Requires:
+#   - custom:button-card (HACS → Frontend)
+#   - Input helpers (created via HA UI or helpers.yaml):
+#       input_select.rainvision_programma      (A / B / C / D)
+#       input_select.rainvision_zona           (1 / 2 / 4 / 8)
+#       input_select.rainvision_tipo_ciclo     (cycle / weekdays)
+#       input_number.rainvision_durata_min     (0–120 min)
+#       input_number.rainvision_ciclo_ore      (1–168 h)
+#       input_number.rainvision_time_index     (0–5)
+#       input_text.rainvision_orario           (HH:MM)
 # ─────────────────────────────────────────────────────────────────────────────
 
-title: ✏️ Modifica Programma
+title: ✏️ Edit Program
 type: grid
 cards:
 
-  # ── Intestazione ─────────────────────────────────────────────────────────
+  # ── Header ───────────────────────────────────────────────────────────────────
   - type: custom:button-card
-    name: "✏️ Modifica Programma"
+    name: "✏️ Edit Program"
     icon: mdi:pencil-circle
     show_state: false
     styles:
@@ -25,39 +38,40 @@ cards:
         - color: white
         - width: 26px
 
-  # ── Selezione programma e zona ────────────────────────────────────────────
+  # ── Program and zone selection ────────────────────────────────────────────────
   - type: entities
-    title: "🎯 Seleziona"
+    title: "🎯 Select"
     show_header_toggle: false
     entities:
       - entity: input_select.rainvision_programma
-        name: Programma
+        name: Program
         icon: mdi:calendar-clock
       - entity: input_select.rainvision_zona
-        name: Zona (ID)
+        name: Zone (ID)
         icon: mdi:sprinkler
 
-  # ── Stato attuale del programma selezionato ───────────────────────────────
+  # ── Live status of the selected program/zone ──────────────────────────────────
+  # Shows the current values from the sensor attributes before editing.
   - type: custom:button-card
-    name: "Stato attuale"
+    name: "Current status"
     icon: mdi:information-outline
     show_state: false
     show_label: true
     label: >
       [[[
         const prog = states['input_select.rainvision_programma']?.state;
-        if (!prog) return 'Seleziona un programma';
+        if (!prog) return 'Select a program';
         const map = { A: 'a_prato', B: 'b_piante', C: 'c_orto', D: 'd' };
         const key = map[prog];
         const entity = states[`sensor.pure_vision_ev_programma_${key}`];
-        if (!entity) return 'Sensore non trovato';
+        if (!entity) return 'Sensor not found';
         const attrs = entity.attributes;
         const zona = states['input_select.rainvision_zona']?.state;
         const zoneMap = { '1': 0, '2': 1, '4': 2, '8': 3 };
         const zIdx = zoneMap[zona] ?? 0;
         const durMin = attrs[`zones_${zIdx}_duration_minutes`] ?? '?';
-        const zoneName = attrs[`zones_${zIdx}_name`] ?? `Zona ${zona}`;
-        return `Prog ${prog} | ${zoneName}: ${durMin} min | Ciclo: ${attrs.cycle ?? '?'}h | ${entity.state}`;
+        const zoneName = attrs[`zones_${zIdx}_name`] ?? `Zone ${zona}`;
+        return `Prog ${prog} | ${zoneName}: ${durMin} min | Cycle: ${attrs.cycle ?? '?'}h | ${entity.state}`;
       ]]]
     styles:
       card:
@@ -76,17 +90,17 @@ cards:
         - color: "#8dc63f"
         - width: 20px
 
-  # ── Modifica durata zona ───────────────────────────────────────────────────
+  # ── Zone duration ─────────────────────────────────────────────────────────────
   - type: entities
-    title: "💧 Durata zona"
+    title: "💧 Zone Duration"
     show_header_toggle: false
     entities:
       - entity: input_number.rainvision_durata_min
-        name: Durata (minuti)
+        name: Duration (minutes)
         icon: mdi:timer-outline
 
   - type: custom:button-card
-    name: "💾 Salva durata zona"
+    name: "💾 Save zone duration"
     icon: mdi:content-save
     show_state: false
     styles:
@@ -110,20 +124,20 @@ cards:
         zone_id: "[[[ return parseInt(states['input_select.rainvision_zona'].state) ]]]"
         duration_seconds: "[[[ return parseInt(states['input_number.rainvision_durata_min'].state) * 60 ]]]"
 
-  # ── Modifica orario di avvio ───────────────────────────────────────────────
+  # ── Start time ────────────────────────────────────────────────────────────────
   - type: entities
-    title: "🕐 Orario di avvio"
+    title: "🕐 Start Time"
     show_header_toggle: false
     entities:
       - entity: input_text.rainvision_orario
-        name: Orario (HH:MM)
+        name: Time (HH:MM)
         icon: mdi:clock-outline
       - entity: input_number.rainvision_time_index
-        name: Slot orario (0-5)
+        name: Time slot (0–5)
         icon: mdi:numeric
 
   - type: custom:button-card
-    name: "💾 Salva orario di avvio"
+    name: "💾 Save start time"
     icon: mdi:clock-check
     show_state: false
     styles:
@@ -148,16 +162,16 @@ cards:
         time: "[[[ return states['input_text.rainvision_orario'].state ]]]"
         active: true
 
-  # ── Modifica tipo schedulazione e ciclo ────────────────────────────────────
+  # ── Schedule type and cycle frequency ────────────────────────────────────────
   - type: entities
-    title: "🔄 Tipo schedulazione e ciclo"
+    title: "🔄 Schedule Type & Cycle"
     show_header_toggle: false
     entities:
       - entity: input_select.rainvision_tipo_ciclo
-        name: Tipo schedulazione
+        name: Schedule type
         icon: mdi:calendar-sync
       - entity: input_number.rainvision_ciclo_ore
-        name: Ogni quante ore (se tipo = cycle)
+        name: Every N hours (if type = cycle)
         icon: mdi:refresh
 
   - type: grid
@@ -165,7 +179,7 @@ cards:
     square: false
     cards:
       - type: custom:button-card
-        name: "💾 Salva tipo"
+        name: "💾 Save type"
         icon: mdi:calendar-sync
         show_state: false
         styles:
@@ -189,7 +203,7 @@ cards:
             cycle_hours: "[[[ return parseInt(states['input_number.rainvision_ciclo_ore'].state) ]]]"
 
       - type: custom:button-card
-        name: "💾 Salva ciclo (ore)"
+        name: "💾 Save cycle (h)"
         icon: mdi:refresh-circle
         show_state: false
         styles:
@@ -212,20 +226,20 @@ cards:
             program: "[[[ return states['input_select.rainvision_programma'].state ]]]"
             cycle_hours: "[[[ return parseInt(states['input_number.rainvision_ciclo_ore'].state) ]]]"
 
-  # ── Abilita / Disabilita programma ─────────────────────────────────────────
+  # ── Program enable / disable toggles ─────────────────────────────────────────
   - type: entities
-    title: "⚡ Stato programmi"
+    title: "⚡ Program Status"
     show_header_toggle: false
     entities:
       - entity: switch.pure_vision_ev_programma_a_prato
-        name: "Programma A — Prato"
+        name: "Program A — Lawn"
         icon: mdi:toggle-switch
       - entity: switch.pure_vision_ev_programma_b_piante
-        name: "Programma B — Piante"
+        name: "Program B — Plants"
         icon: mdi:toggle-switch
       - entity: switch.pure_vision_ev_programma_c_orto
-        name: "Programma C — Orto"
+        name: "Program C — Garden"
         icon: mdi:toggle-switch
       - entity: switch.pure_vision_ev_programma_d
-        name: "Programma D"
+        name: "Program D"
         icon: mdi:toggle-switch

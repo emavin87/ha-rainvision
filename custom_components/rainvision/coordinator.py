@@ -60,7 +60,8 @@ class RainVisionCoordinator(DataUpdateCoordinator):
         self.devices:  dict[int, dict]  = {}
         self.programs: dict[int, list]  = {}
         self.realtime: dict[int, dict]  = {}
-        self.scan_peers: dict[int, dict] = {}   # device_id -> peer dict from nuvola/scan/full
+        self.scan_peers:  dict[int, dict] = {}   # device_id -> peer dict from nuvola/scan/full
+        self.last_poll_at: str | None       = None  # ISO timestamp of last successful poll
                                                    # covers ALL BLE devices (Pure Vision, Acqua Vision, etc.)
 
     async def _async_update_data(self) -> dict:

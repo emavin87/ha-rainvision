@@ -80,6 +80,7 @@ async def async_setup_entry(
             entities.append(RainVisionDeviceLastUpdatedSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionRealtimeTimestampSensor(coordinator, cloud_id, device_id))
             entities.append(RainVisionDeviceRSSISensor(coordinator, cloud_id, device_id))
+            entities.append(RainVisionActiveZoneSensor(coordinator, cloud_id, device_id))
 
             # One sensor per program -- all data exposed as flat attributes
             for prog_info in device.get("fullprogramnames", []):
@@ -765,6 +766,7 @@ class RainVisionRealtimeTimestampSensor(CoordinatorEntity, SensorEntity):
             "battery":      status.get("battery"),
             "status_hex":   status.get("status"),
             "pause_hex":    status.get("pause"),
+            "last_poll_at": self.coordinator.last_poll_at,
         }
 
     @property
@@ -959,3 +961,96 @@ class RainVisionBLEPeerRSSISensor(CoordinatorEntity, SensorEntity):
             sw_version=peer.get("fw"),
             via_device=(DOMAIN, f"cloud_{peer.get('cloud_id')}"),
         )
+
+
+class RainVisionActiveZoneSensor(CoordinatorEntity, SensorEntity):
+    """Sensor showing which zone is currently irrigating.
+
+    Decodes the 'status' hex string from the nuvola/device real-time response.
+    The active zone bitmask is encoded in bytes 4-5 (offset 8-9) of the hex string:
+
+      Bitmask -> Zone
+        0x01  -> Zone 1 (Lawn 1 / Prato 1)
+        0x02  -> Zone 2 (Lawn 2 / Prato 2)
+        0x04  -> Zone 3 (Plants / Piante)
+        0x08  -> Zone 4 (Garden / Orto)
+        0x00  -> No zone active (idle)
+
+    State: zone name (e.g. "Prato 1") or "Idle" when no zone is running.
+    Extra attributes:
+      zone_bitmask     — raw bitmask value (int)
+      zone_progressive — progressive zone index (1–4) or None
+      status_hex       — full raw status hex string
+    """
+
+    _attr_icon = "mdi:sprinkler-fire"
+
+    def __init__(self, coordinator: RainVisionCoordinator, cloud_id: int, device_id: int) -> None:
+        super().__init__(coordinator)
+        self._cloud_id       = cloud_id
+        self._device_id      = device_id
+        self._attr_unique_id = f"device_{device_id}_active_zone"
+
+    @property
+    def _device(self) -> dict:
+        return self.coordinator.devices.get(self._device_id, {})
+
+    @property
+    def _cloud(self) -> dict:
+        return self.coordinator.clouds.get(self._cloud_id, {})
+
+    @property
+    def _status_hex(self) -> str:
+        rt = self.coordinator.realtime.get(self._device_id, {})
+        return (rt.get("data") or {}).get("status", {}).get("status", "") or ""
+
+    @property
+    def _zone_bitmask(self) -> int:
+        """Extract the active zone bitmask from bytes 4-5 of the status hex string."""
+        hex_str = self._status_hex
+        if len(hex_str) < 10:
+            return 0
+        try:
+            return int(hex_str[8:10], 16)
+        except ValueError:
+            return 0
+
+    @property
+    def _zone_name(self) -> str:
+        """Return the display name of the active zone from coordinator zone data."""
+        bitmask = self._zone_bitmask
+        if bitmask == 0:
+            return "Idle"
+        # Map bitmask to progressive index
+        bitmask_to_progressive = {0x01: 1, 0x02: 2, 0x04: 3, 0x08: 4}
+        progressive = bitmask_to_progressive.get(bitmask)
+        if progressive is None:
+            return f"Zone bitmask 0x{bitmask:02x}"
+        # Look up the custom name from zone names
+        for z in self._device.get("zonenames", []):
+            if z.get("zone_progressive") == progressive:
+                return z.get("custom_name") or z.get("default_name", f"Zone {progressive}")
+        return f"Zone {progressive}"
+
+    @property
+    def name(self) -> str:
+        return f"{self._device.get('name', 'Device')} Active Zone"
+
+    @property
+    def native_value(self) -> str:
+        return self._zone_name
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        bitmask = self._zone_bitmask
+        bitmask_to_progressive = {0x01: 1, 0x02: 2, 0x04: 3, 0x08: 4}
+        return {
+            "zone_bitmask":     bitmask,
+            "zone_progressive": bitmask_to_progressive.get(bitmask),
+            "status_hex":       self._status_hex,
+            "last_poll_at":     self.coordinator.last_poll_at,
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_info(self._device, self._cloud)
