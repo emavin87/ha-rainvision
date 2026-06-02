@@ -41,15 +41,17 @@ class RainVisionCoordinator(DataUpdateCoordinator):
         realtime (dict[int, dict]):     device_id → real-time status from nuvola/device.
     """
 
-    def __init__(self, hass: HomeAssistant, api: RainVisionApi) -> None:
+    def __init__(self, hass: HomeAssistant, api: RainVisionApi, entry=None) -> None:
         """Initialise the coordinator.
 
         Args:
-            hass: Home Assistant instance.
-            api:  Authenticated RainVisionApi client.
+            hass:  Home Assistant instance.
+            api:   Authenticated RainVisionApi client.
+            entry: Config entry (optional). Used to read scan_interval.
         """
         # Use scan_interval from config entry if set, otherwise fall back to default
-        scan_interval = entry.data.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL)
+        scan_interval = (entry.data.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL)
+                         if entry else UPDATE_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,

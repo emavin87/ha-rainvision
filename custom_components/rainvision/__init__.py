@@ -123,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Rain Vision: cannot authenticate: %s", err)
         return False
 
-    coordinator = RainVisionCoordinator(hass, api)
+    coordinator = RainVisionCoordinator(hass, api, entry)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
