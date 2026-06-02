@@ -18,5 +18,30 @@
     "abort": {
       "already_configured": "This account is already configured"
     }
+  },
+  "config_flow": {
+    "step": {
+      "user": {
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to fetch data from the Rain Vision API (min: 60, max: 3600, default: 180)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rain Vision Options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to fetch data from the Rain Vision API (min: 60, max: 3600, default: 180)"
+        }
+      }
+    }
   }
 }

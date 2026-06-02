@@ -18,5 +18,30 @@
     "abort": {
       "already_configured": "Questo account è già configurato"
     }
+  },
+  "config_flow": {
+    "step": {
+      "user": {
+        "data": {
+          "scan_interval": "Intervallo di polling (secondi)"
+        },
+        "data_description": {
+          "scan_interval": "Ogni quanti secondi aggiornare i dati dall'API Rain Vision (min: 60, max: 3600, default: 180)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rain Vision Options",
+        "data": {
+          "scan_interval": "Intervallo di polling (secondi)"
+        },
+        "data_description": {
+          "scan_interval": "Ogni quanti secondi aggiornare i dati dall'API Rain Vision (min: 60, max: 3600, default: 180)"
+        }
+      }
+    }
   }
 }

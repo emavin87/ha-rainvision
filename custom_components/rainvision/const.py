@@ -18,7 +18,10 @@ MODEL_DEVICE = "Pure Vision"
 CONF_TOKEN = "token"
 
 # How often the coordinator polls the Rain Vision API (seconds)
-UPDATE_INTERVAL = 180  # 3 minutes
+UPDATE_INTERVAL    = 180   # default polling interval in seconds (3 minutes)
+CONF_SCAN_INTERVAL = "scan_interval"  # config entry key for polling interval
+MIN_SCAN_INTERVAL  = 60    # minimum allowed polling interval (1 minute)
+MAX_SCAN_INTERVAL  = 3600  # maximum allowed polling interval (1 hour)
 
 # Default duration used when manually starting a zone without specifying one
 DEFAULT_MANUAL_DURATION = 10  # minutes

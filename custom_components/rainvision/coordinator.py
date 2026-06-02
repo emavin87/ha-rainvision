@@ -22,7 +22,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import RainVisionApi, RainVisionApiError, RainVisionAuthError
-from .const import DOMAIN, UPDATE_INTERVAL
+from .const import DOMAIN, UPDATE_INTERVAL, CONF_SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,11 +48,13 @@ class RainVisionCoordinator(DataUpdateCoordinator):
             hass: Home Assistant instance.
             api:  Authenticated RainVisionApi client.
         """
+        # Use scan_interval from config entry if set, otherwise fall back to default
+        scan_interval = entry.data.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=UPDATE_INTERVAL),
+            update_interval=timedelta(seconds=scan_interval),
         )
         self.api      = api
         self.places:   list[dict]       = []
@@ -196,6 +198,11 @@ class RainVisionCoordinator(DataUpdateCoordinator):
                     "Could not fetch programs for device %s: %s", device_id, err
                 )
                 self.programs.setdefault(device_id, [])
+
+        # Record the UTC timestamp of this successful poll cycle.
+        # Exposed as an attribute on sensors so users can see when data was last refreshed.
+        from datetime import datetime, timezone
+        self.last_poll_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return {
             "places":   self.places,
