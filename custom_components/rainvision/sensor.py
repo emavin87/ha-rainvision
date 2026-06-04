@@ -346,26 +346,41 @@ class RainVisionMeteoPauseSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
+        """Return 'Active' if any program is weather-paused, 'Inactive' otherwise."""
         meteo_json = self._device.get("meteo_pause_json")
         if not meteo_json:
-            return "No pause"
-        try:
-            programs = json.loads(meteo_json)
-            paused   = [p["name"] for p in programs if not p.get("should_run", True)]
-            return f"Pause: {', '.join(paused)}" if paused else "Active"
-        except (json.JSONDecodeError, KeyError):
             return "Unknown"
+        import json
+        try:
+            items = json.loads(meteo_json) if isinstance(meteo_json, str) else meteo_json
+        except (json.JSONDecodeError, TypeError):
+            return "Unknown"
+        paused = [p["name"] for p in items if not p.get("should_run", True)]
+        return "Active" if paused else "Inactive"
 
+    
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return raw meteo pause data including pop, rain, temp per program."""
+        """Return meteo pause details per program as flat attributes."""
         meteo_json = self._device.get("meteo_pause_json")
         if not meteo_json:
             return {}
         try:
-            return {"programs": json.loads(meteo_json)}
-        except json.JSONDecodeError:
+            items = json.loads(meteo_json) if isinstance(meteo_json, str) else meteo_json
+        except (json.JSONDecodeError, TypeError):
             return {}
+        attrs = {}
+        for p in items:
+            name = p.get("name", "?")
+            attrs[f"prog_{name}_should_run"]  = p.get("should_run", True)
+            attrs[f"prog_{name}_rain"]        = p.get("rain")
+            attrs[f"prog_{name}_pop"]         = p.get("pop")
+            attrs[f"prog_{name}_temp"]        = p.get("temp")
+            attrs[f"prog_{name}_wind"]        = p.get("wind")
+            attrs[f"prog_{name}_irrigation_variable"] = p.get("irrigation_variable")
+        paused = [p["name"] for p in items if not p.get("should_run", True)]
+        attrs["paused_programs"] = paused if paused else []
+        return attrs
 
     @property
     def device_info(self) -> DeviceInfo:
